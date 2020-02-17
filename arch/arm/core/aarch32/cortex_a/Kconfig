@@ -1,0 +1,86 @@
+# ARM Cortex-A platform configuration options
+
+# Copyright (c) 2018 Marvell
+# Copyright (c) 2018 Lexmark International, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# NOTE: We have the specific core implementations first and outside of the
+# if CPU_CORTEX_A block so that SoCs can select which core they are using
+# without having to select all the options related to that core.  Everything
+# else is captured inside the if CPU_CORTEX_A block so they are not exposed
+# if one selects a different ARM Cortex Family (Cortex-R or Cortex-M)
+
+config CPU_CORTEX_A9
+	bool
+	select CPU_CORTEX_A
+	select ARMV7_A
+	select ARMV7_A_FP if CPU_HAS_FPU
+	select ARMV7_A_MMU if CPU_HAS_MMU
+	help
+	  This option signifies the use of a Cortex-A9 CPU
+
+if CPU_CORTEX_A
+
+config ARMV7_A
+	bool
+	select ATOMIC_OPERATIONS_BUILTIN
+	select ISA_ARM
+	help
+	  This option signifies the use of an ARMv7-A processor
+	  implementation.
+
+	  From https://developer.arm.com/products/architecture/cpu-architecture/a-profile:
+	  The Armv7-A architecture implements a traditional Arm architecture with 
+	  multiple modes, supports a Virtual Memory System Architecture (VMSA) 
+	  based on a Memory Management Unit (MMU), and supports the Arm (A32) and 
+	  Thumb (T32) instruction sets.
+
+config ARMV7_A_FP
+	bool
+	depends on ARMV7_A
+	help
+	  This option signifies the use of an ARMv7-A processor
+	  implementation supporting the Floating-Point Extension.
+
+config ARMV7_A_MMU
+	bool
+	depends on ARMV7_A
+	help
+	  This option signifies the use of an ARMv7-A processor
+	  implementation supporting the ARM Memory Management Unit (MMU).
+
+config ARMV7_EXCEPTION_STACK_SIZE
+	int "Undefined Instruction and Abort stack size (in bytes)"
+	default 256
+	help
+	  This option specifies the size of the stack used by the undefined
+	  instruction and data abort exception handlers.
+
+config ARMV7_FIQ_STACK_SIZE
+	int "FIQ stack size (in bytes)"
+	default 256
+	help
+	  This option specifies the size of the stack used by the FIQ handler.
+
+config ARMV7_SVC_STACK_SIZE
+	int "SVC stack size (in bytes)"
+	default 512
+	help
+	  This option specifies the size of the stack used by the SVC handler.
+
+config ARMV7_SYS_STACK_SIZE
+	int "SYS stack size (in bytes)"
+	default 1024
+	help
+	  This option specifies the size of the stack used by the system mode.
+
+config RUNTIME_NMI
+	default y
+
+config GEN_ISR_TABLES
+	default y
+
+config GEN_IRQ_VECTOR_TABLE
+	default n
+
+endif # CPU_CORTEX_A

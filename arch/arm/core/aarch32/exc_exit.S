@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ARM Cortex-M and Cortex-R exception/interrupt exit API
+ * @brief ARM Cortex-M / Cortex-R / Cortex-A exception/interrupt exit API
  *
  *
  * Provides functions for performing kernel handling when exiting exceptions or
@@ -24,7 +24,8 @@ _ASM_FILE_PROLOGUE
 GTEXT(z_arm_exc_exit)
 GTEXT(z_arm_int_exit)
 GDATA(_kernel)
-#if defined(CONFIG_CPU_CORTEX_R)
+#if defined(CONFIG_CPU_CORTEX_R) \
+	|| defined (CONFIG_CPU_CORTEX_A)
 GTEXT(z_arm_pendsv)
 #endif
 
@@ -71,7 +72,8 @@ SECTION_SUBSEC_FUNC(TEXT, _HandlerModeExit, z_arm_int_exit)
  */
 
 SECTION_SUBSEC_FUNC(TEXT, _HandlerModeExit, z_arm_exc_exit)
-#if defined(CONFIG_CPU_CORTEX_R)
+#if defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
     /* r0 contains the caller mode */
     push {r0, lr}
 #endif
@@ -90,7 +92,8 @@ SECTION_SUBSEC_FUNC(TEXT, _HandlerModeExit, z_arm_exc_exit)
     ldr r1, =_SCS_ICSR
     ldr r2, =_SCS_ICSR_PENDSV
     str r2, [r1]
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
     bl z_arm_pendsv
 #endif
 
@@ -116,7 +119,8 @@ _EXIT_EXC:
 
 #if defined(CONFIG_CPU_CORTEX_M)
     bx lr
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
     /* Restore the caller mode to r0 */
     pop {r0, lr}
 

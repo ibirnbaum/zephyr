@@ -7,10 +7,10 @@
 
 /**
  * @file
- * @brief Thread context switching for ARM Cortex-M and Cortex-R
+ * @brief Thread context switching for ARM Cortex-M / Cortex-R / Cortex-A
  *
  * This module implements the routines necessary for thread context switching
- * on ARM Cortex-M and Cortex-R CPUs.
+ * on ARM Cortex-M, Cortex-R and Cortex-A CPUs.
  */
 
 #include <toolchain.h>
@@ -43,7 +43,7 @@ GDATA(_kernel)
  *
  * For Cortex-M, z_arm_pendsv() is invoked with no arguments.
  *
- * For Cortex-R, PendSV exception is not supported by the architecture and this
+ * For Cortex-R/-A, PendSV exception is not supported by the architecture and this
  * function is directly called either by _IntExit in case of preemption, or
  * z_arm_svc in case of cooperative switching.
  */
@@ -108,10 +108,32 @@ out_fp_active:
 out_fp_endif:
     str r0, [r2, #_thread_offset_to_mode]
 #endif /* CONFIG_FP_SHARING */
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) || defined(CONFIG_ARMV7_A)
     /* Store rest of process context */
     mrs r12, SPSR
     stm r0, {r4-r12,sp,lr}^
+
+    #if defined(CONFIG_ARMV7_A) && defined(CONFIG_FLOAT)
+
+    /* addr of floating point regs in thread in r0 */
+
+    add r0, r2, #_preempt_float_offset_to_d00
+
+    vstmia r0, {d0-d15}
+
+    add r0, r2, #_preempt_float_offset_to_d16
+
+    vstmia r0, {d16-d31}
+
+    add r3, r2, #_preempt_float_offset_to_fpscr
+
+    vmrs r0, fpscr
+    vmrs r1, fpexc
+
+    stm r3, {r0-r1}^
+    ldr r1, =_kernel
+
+    #endif
 #else
 #error Unknown ARM architecture
 #endif /* CONFIG_ARMV6_M_ARMV8_M_BASELINE */
@@ -123,7 +145,7 @@ out_fp_endif:
     movs.n r0, #_EXC_IRQ_DEFAULT_PRIO
     msr BASEPRI, r0
     isb /* Make the effect of disabling interrupts be realized immediately */
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) || defined(CONFIG_ARMV7_A)
     /*
      * Interrupts are still disabled from arch_swap so empty clause
      * here to avoid the preprocessor error below
@@ -305,7 +327,7 @@ in_fp_endif:
     /* load callee-saved + psp from thread */
     add r0, r2, #_thread_offset_to_callee_saved
     ldmia r0, {v1-v8, ip}
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) || defined(CONFIG_ARMV7_A)
 _thread_irq_disabled:
     /* load _kernel into r1 and current k_thread into r2 */
     ldr r1, =_kernel
@@ -318,6 +340,31 @@ _thread_irq_disabled:
     /* restore r4-r12 for incoming thread, plus system sp and lr */
     ldm r0, {r4-r12,sp,lr}^
     msr SPSR_fsxc, r12
+
+    #if defined(CONFIG_ARMV7_A) && defined(CONFIG_FLOAT)
+
+    /* addr of floating point regs in thread in r0 */
+
+    add r0, r2, #_preempt_float_offset_to_d00
+
+    vldmia r0, {d0-d15}
+
+    add r0, r2, #_preempt_float_offset_to_d16
+
+    vldmia r0, {d16-d31}
+
+    add r3, r2, #_preempt_float_offset_to_fpscr
+
+    ldr r0, [r3, #0]
+    ldr r1, [r3, #4]
+
+    vmsr fpscr, r0
+    vmsr fpexc, r1
+
+    ldr r1, =_kernel
+
+    #endif
+
 #else
 #error Unknown ARM architecture
 #endif /* CONFIG_ARMV6_M_ARMV8_M_BASELINE */
@@ -559,7 +606,7 @@ valid_syscall_id:
     bx lr
 #endif /* CONFIG_USERSPACE */
 
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) || defined(CONFIG_ARMV7_A)
 
 /**
  *
@@ -638,6 +685,11 @@ _oops:
 
 GTEXT(z_arm_cortex_r_svc)
 SECTION_FUNC(TEXT, z_arm_cortex_r_svc)
+    svc #0
+    bx lr
+
+GTEXT(z_arm_cortex_a_svc)
+SECTION_FUNC(TEXT, z_arm_cortex_a_svc)
     svc #0
     bx lr
 

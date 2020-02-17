@@ -1,0 +1,53 @@
+# Kconfig - AVNET Zedboard
+#
+# Copyright (c) 2019, Immo Birnbaum
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+if BOARD_ZEDBOARD
+
+config BOARD
+	default "zedboard"
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	int
+	default 111111111
+
+config FLASH_SIZE
+	default $(dt_int_val,DT_FLASH_SIZE)
+
+config FLASH_BASE_ADDRESS
+	default $(dt_hex_val,DT_FLASH_BASE_ADDRESS)
+
+if SERIAL
+
+	config UART_XLNX_PS
+	default y
+
+endif # SERIAL
+
+if NETWORKING
+
+	config NET_L2_ETHERNET
+	default y
+
+	config ETH_XLNX_EMACPS
+	default y
+
+	config ETH_XLNX_EMACPS_PORT_0
+	default y
+
+	config ETH_XLNX_EMACPS_PORT_1
+	default n
+
+endif # NETWORKING
+
+if GPIO
+
+	config GPIO_XLNX_AXI
+	default y
+
+endif # GPIO
+
+endif # BOARD_ZEDBOARD

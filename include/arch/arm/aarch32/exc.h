@@ -55,10 +55,16 @@ struct __esf {
 		sys_define_gpr_with_alias(pc, r15);
 		u32_t xpsr;
 	} basic;
+#ifndef CONFIG_ARMV7_A
 #if defined(CONFIG_FLOAT) && defined(CONFIG_FP_SHARING)
 	float s[16];
 	u32_t fpscr;
 	u32_t undefined;
+#endif
+#else
+	double d[32]; /* D0..D31 */
+	u32_t fpexc;
+	u32_t fpscr;
 #endif
 };
 

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Xilinx GEM Ethernet controller
+
+compatible: "xlnx,emacps"
+
+include: ethernet.yaml
+
+properties:
+    reg:
+      required: true
+    interrupts:
+      required: true

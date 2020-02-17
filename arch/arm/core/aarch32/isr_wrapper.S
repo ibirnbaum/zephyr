@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ARM Cortex-M and Cortex-R wrapper for ISRs with parameter
+ * @brief ARM Cortex-M / Cortex-R / Cortex-A wrapper for ISRs with parameter
  *
  * Wrapper installed in vector table for handling dynamic interrupts that accept
  * a parameter.
@@ -43,7 +43,8 @@ SECTION_FUNC(TEXT, _isr_wrapper)
 
 #if defined(CONFIG_CPU_CORTEX_M)
 	push {r0,lr}		/* r0, lr are now the first items on the stack */
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	/*
 	 * Save away r0-r3 from previous context to the process stack since
 	 * they are clobbered here.  Also, save away lr since we may swap
@@ -107,7 +108,8 @@ _idle_state_cleared:
 		/* clear kernel idle state */
 		strne	r1, [r2, #_kernel_offset_to_idle]
 		blne	z_sys_power_save_idle_exit
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	beq _idle_state_cleared
 	movs r1, #0
 	/* clear kernel idle state */
@@ -134,7 +136,8 @@ _idle_state_cleared:
 #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 	sub r0, r0, #16	/* get IRQ number */
 	lsl r0, r0, #3	/* table is 8-byte wide */
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	/*
 	 * Cortex-R only has one IRQ line so the main handler will be at
 	 * offset 0 of the table.
@@ -171,7 +174,8 @@ _idle_state_cleared:
 	mov lr, r3
 #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 	pop {r0, lr}
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	/*
 	 * r0,lr were saved on the process stack since a swap could
 	 * happen.  exc_exit will handle getting those values back
@@ -182,7 +186,8 @@ _idle_state_cleared:
 #error Unknown ARM architecture
 #endif /* CONFIG_ARMV6_M_ARMV8_M_BASELINE */
 
-#if defined(CONFIG_CPU_CORTEX_R)
+#if defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	mov r0, #RET_FROM_IRQ
 #endif
 

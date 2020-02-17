@@ -1,0 +1,291 @@
+# Copyright (c) 2019 Lexmark International, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+menuconfig SOC_XILINX_ZYNQ7000
+	bool "Xilinx Zynq-7000"
+	select ARM
+	select CPU_CORTEX_A9
+	select GIC_PL390
+	select MULTI_LEVEL_INTERRUPTS
+	select 2ND_LEVEL_INTERRUPTS
+
+config ZYNQ_PS_REF_FREQUENCY
+	depends on SOC_XILINX_ZYNQ7000
+	int "Processor system reference clock (Hz)"
+	default 33333333
+	help
+	  PS reference clock frequency, to be obtained from the Zynq PS7 summary report.
+
+choice
+	prompt "Clock ratio"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the clock ratio.
+
+config ZYNQ_CLOCK_RATIO_6321
+        bool "6:3:2:1"
+	help
+	  Clock ratio is 6:3:2:1, a.k.a. 6:2:1.
+
+config ZYNQ_CLOCK_RATIO_4221
+        bool "4:2:2:1"
+	help
+	  Clock ratio is 4:2:2:1, a.k.a. 4:2:1.
+
+endchoice
+
+config ZYNQ_ARMPLL_MULTIPLIER
+	depends on SOC_XILINX_ZYNQ7000
+	int "ARM PLL reference frequency multiplier"
+	default 40
+	help
+	  The multiplier applied to the PS reference clock by the ARM PLL.
+
+config ZYNQ_DDRPLL_MULTIPLIER
+	depends on SOC_XILINX_ZYNQ7000
+	int "DDR PLL reference frequency multiplier"
+	default 32
+	help
+	  The multiplier applied to the PS reference clock by the DDR PLL.
+
+config ZYNQ_IOPLL_MULTIPLIER
+	depends on SOC_XILINX_ZYNQ7000
+	int "I/O PLL reference frequency multiplier"
+	default 30
+	help
+	  The multiplier applied to the PS reference clock by the I/O PLL.
+
+config ZYNQ_ARMPLL_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "ARM PLL divisor for cpu_<xxx> generation"
+	default 2
+	help
+	  The divisor applied to the output clock of the ARM PLL based on which the clock signals cpu_6x4x, 
+	  cpu_3x2x, cpu_2x and cpu_1x are generated.
+
+config ZYNQ_DDRPLL_DDR3X_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "DDR PLL divisor for ddr_3x generation"
+	default 2
+	help
+	  The divisor applied to the output clock of the DDR PLL based on which the clock signal ddr_3x 
+	  is generated.
+
+config ZYNQ_DDRPLL_DDR2X_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "DDR PLL divisor for ddr_2x generation"
+	default 3
+	help
+	  The divisor applied to the output clock of the DDR PLL based on which the clock signal ddr_2x 
+	  is generated.
+
+
+config ZYNQ_DDRPLL_DDRDCI_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "DDR PLL divisor 0 for DDR DCI clock generation"
+	default 35
+	help
+	  The first divisor applied to the output clock of the DDR PLL based on which the DDR DCI clock 
+	  signal is generated.
+
+config ZYNQ_DDRPLL_DDRDCI_DIVISOR1
+	depends on SOC_XILINX_ZYNQ7000
+	int "DDR PLL divisor 1 for DDR DCI clock generation"
+	default 3
+	help
+	  The second divisor applied to the output clock of the DDR PLL based on which the DDR DCI clock 
+	  signal is generated.
+
+######################################################################################
+# CLOCK CONFIGURATION OF I/O PERIPHERIALS                                            #
+######################################################################################
+
+###### ENET0 ######
+
+menu "ENET0 clock configuration"
+	depends on SOC_XILINX_ZYNQ7000
+
+choice
+	prompt "RX clock, control/data signals source"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the signal source for the RX clock and the control and data signals.
+
+config ZYNQ_ENET0_SRCSEL_MIO
+        bool "MIO"
+	help
+	  Signal source is MIO.
+
+config ZYNQ_ENET0_SRCSEL_EMIO
+	bool "EMIO"
+	help
+	  Signal source is EMIO.
+
+endchoice
+
+choice
+	prompt "Controller reference clock source"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the source of the reference clock to be used by GEM0.
+
+config ZYNQ_ENET0_REFCLK_IOPLL
+        bool "I/O PLL"
+	help
+	  Reference clock source is the I/O PLL.
+
+config ZYNQ_ENET0_REFCLK_ARMPLL
+        bool "ARM PLL"
+	help
+	  Reference clock source is the ARM PLL.
+
+config ZYNQ_ENET0_REFCLK_DDRPLL
+        bool "DDR PLL"
+	help
+	  Reference clock source is the DDR PLL.
+
+config ZYNQ_ENET0_REFCLK_EMIOCLK
+        bool "EMIO clock"
+	help
+	  Reference clock source is the EMIO clock.
+
+endchoice
+
+config ZYNQ_ENET0_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "Reference PLL divisor 0 for ENET0 clock generation - set to 0 for auto-detection"
+	default 0
+	help
+	  The first divisor applied to the output clock of the reference PLL based on which the ENET0 
+	  clock signal is generated. If this value is set to 0 and the EMACPS driver is selected for
+	  the GEM0 interface, this value will be auto-detected based on the link speed selected in
+	  the EMACPS driver's configuration settings. When using the EMACPS driver, manual configuration
+	  is only required when using the external EMIO clock.
+
+config ZYNQ_ENET0_DIVISOR1
+	depends on SOC_XILINX_ZYNQ7000
+	int "Reference PLL divisor 1 for ENET0 clock generation - set to 0 for auto-detection"
+	default 0
+	help
+	  The second divisor applied to the output clock of the reference PLL based on which the ENET0 
+	  clock signal is generated. If this value is set to 0 and the EMACPS driver is selected for
+	  the GEM0 interface, this value will be auto-detected based on the link speed selected in
+	  the EMACPS driver's configuration settings. When using the EMACPS driver, manual configuration
+	  is only required when using the external EMIO clock.
+
+endmenu
+
+###### ENET1 ######
+
+menu "ENET1 clock configuration"
+	depends on SOC_XILINX_ZYNQ7000
+
+choice
+	prompt "RX clock, control/data signals source"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the signal source for the RX clock and the control and data signals.
+
+config ZYNQ_ENET1_SRCSEL_MIO
+        bool "MIO"
+	help
+	  Signal source is MIO.
+
+config ZYNQ_ENET1_SRCSEL_EMIO
+	bool "EMIO"
+	help
+	  Signal source is EMIO.
+
+endchoice
+
+choice
+	prompt "Controller reference clock source"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the source of the reference clock to be used by GEM1.
+
+config ZYNQ_ENET1_REFCLK_IOPLL
+        bool "I/O PLL"
+	help
+	  Reference clock source is the I/O PLL.
+
+config ZYNQ_ENET1_REFCLK_ARMPLL
+        bool "ARM PLL"
+	help
+	  Reference clock source is the ARM PLL.
+
+config ZYNQ_ENET1_REFCLK_DDRPLL
+        bool "DDR PLL"
+	help
+	  Reference clock source is the DDR PLL.
+
+config ZYNQ_ENET1_REFCLK_EMIOCLK
+        bool "EMIO clock"
+	help
+	  Reference clock source is the EMIO clock.
+
+endchoice
+
+config ZYNQ_ENET1_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "Reference PLL divisor 0 for ENET1 clock generation - set to 0 for auto-detection"
+	default 0
+	help
+	  The first divisor applied to the output clock of the reference PLL based on which the ENET1 
+	  clock signal is generated. If this value is set to 0 and the EMACPS driver is selected for
+	  the GEM1 interface, this value will be auto-detected based on the link speed selected in
+	  the EMACPS driver's configuration settings. When using the EMACPS driver, manual configuration
+	  is only required when using the external EMIO clock.
+
+config ZYNQ_ENET1_DIVISOR1
+	depends on SOC_XILINX_ZYNQ7000
+	int "Reference PLL divisor 1 for ENET0 clock generation - set to 0 for auto-detection"
+	default 0
+	help
+	  The second divisor applied to the output clock of the reference PLL based on which the ENET1 
+	  clock signal is generated. If this value is set to 0 and the EMACPS driver is selected for
+	  the GEM1 interface, this value will be auto-detected based on the link speed selected in
+	  the EMACPS driver's configuration settings. When using the EMACPS driver, manual configuration
+	  is only required when using the external EMIO clock.
+
+endmenu
+
+###### UART0/1 ######
+
+menu "UART0/1 clock configuration"
+	depends on SOC_XILINX_ZYNQ7000
+
+choice
+	prompt "Controller reference clock source"
+	depends on SOC_XILINX_ZYNQ7000
+	help
+	  Configures the source of the reference clock to be used by UART0/1.
+
+config ZYNQ_UART01_REFCLK_IOPLL
+        bool "I/O PLL"
+	help
+	  Reference clock source is the I/O PLL.
+
+config ZYNQ_UART01_REFCLK_ARMPLL
+        bool "ARM PLL"
+	help
+	  Reference clock source is the ARM PLL.
+
+config ZYNQ_UART01_REFCLK_DDRPLL
+        bool "DDR PLL"
+	help
+	  Reference clock source is the DDR PLL.
+
+endchoice
+
+config ZYNQ_UART01_DIVISOR0
+	depends on SOC_XILINX_ZYNQ7000
+	int "Reference PLL divisor for UART0/1 clock generation"
+	default 20
+	help
+	  The divisor applied to the output clock of the reference PLL based on which the UART0/1 clock signal is generated.
+
+endmenu
+

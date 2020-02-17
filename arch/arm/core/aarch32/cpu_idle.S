@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ARM Cortex-M and Cortex-R power management
+ * @brief ARM Cortex-M / Cortex-R / Cortex-A power management
  *
  */
 
@@ -63,7 +63,8 @@ SECTION_FUNC(TEXT, arch_cpu_idle)
 #endif /* CONFIG_TRACING */
 
 #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE) \
-	|| defined(CONFIG_ARMV7_R)
+	|| defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 	cpsie i
 #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 	/* clear BASEPRI so wfi is awakened by incoming interrupts */
@@ -103,7 +104,8 @@ SECTION_FUNC(TEXT, arch_cpu_atomic_idle)
 	/* r0: interrupt mask from caller */
 
 #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE) \
-	|| defined(CONFIG_ARMV7_R)
+	|| defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 	/* No BASEPRI, call wfe directly (SEVONPEND set in z_CpuIdleInit()) */
 	wfe
 

@@ -6,10 +6,10 @@
 
 /**
  * @file
- * @brief New thread creation for ARM Cortex-M and Cortex-R
+ * @brief New thread creation for ARM Cortex-M / Cortex-R / Cortex-A
  *
- * Core thread related primitives for the ARM Cortex-M and Cortex-R
- * processor architecture.
+ * Core thread related primitives for the ARM Cortex-M, Cortex-R and
+ * Cortex-A processor architecture.
  */
 
 #include <kernel.h>
@@ -133,9 +133,13 @@ void arch_new_thread(struct k_thread *thread, k_thread_stack_t *stack,
 		0x01000000UL; /* clear all, thumb bit is 1, even if RO */
 
 	thread->callee_saved.psp = (u32_t)pInitCtx;
-#if defined(CONFIG_CPU_CORTEX_R)
+#if defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	pInitCtx->basic.lr = (u32_t)pInitCtx->basic.pc;
-	thread->callee_saved.spsr = A_BIT | T_BIT | MODE_SYS;
+	thread->callee_saved.spsr  = A_BIT | MODE_SYS;
+#ifdef CONFIG_ISA_THUMB2
+	thread->callee_saved.spsr |= T_BIT;
+#endif
 	thread->callee_saved.lr = (u32_t)pInitCtx->basic.pc;
 #endif
 	thread->arch.basepri = 0;
@@ -371,7 +375,12 @@ void arch_switch_to_main_thread(struct k_thread *main_thread,
 	 * Unshared FP Registers mode (In Shared FP Registers mode, FPSCR is
 	 * initialized at thread creation for threads that make use of the FP).
 	 */
+#if !defined(CONFIG_ARMV7_A)
 	__set_FPSCR(0);
+#else
+	// FIXME
+#endif
+
 #if defined(CONFIG_FP_SHARING)
 	/* In Sharing mode clearing FPSCR may set the CONTROL.FPCA flag. */
 	__set_CONTROL(__get_CONTROL() & (~(CONTROL_FPCA_Msk)));
@@ -433,7 +442,8 @@ void arch_switch_to_main_thread(struct k_thread *main_thread,
 
 	"movs r1, #0\n\t"
 #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE) \
-			|| defined(CONFIG_ARMV7_R)
+			|| defined(CONFIG_ARMV7_R) \
+			|| defined(CONFIG_ARMV7_A)
 	"cpsie i\n\t"		/* __enable_irq() */
 #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 	"cpsie if\n\t"		/* __enable_irq(); __enable_fault_irq() */

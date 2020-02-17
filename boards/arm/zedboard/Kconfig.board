@@ -1,0 +1,12 @@
+# Kconfig - AVNET Zedboard
+#
+# Copyright (c) 2019, Immo Birnbaum
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config BOARD_ZEDBOARD
+    bool "AVNET/Digilent Zedboard"
+    depends on SOC_XILINX_ZYNQ7000
+    select SOC_PART_NUMBER_XC7Z010
+

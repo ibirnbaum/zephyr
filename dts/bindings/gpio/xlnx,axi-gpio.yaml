@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: Xilinx AXI GPIO IP core
+
+compatible: "xlnx,axi-gpio"
+
+include: [gpio-controller.yaml, base.yaml]
+
+properties:
+    reg:
+      required: true
+
+    label:
+      required: true
+
+    interrupts:
+      required: false
+
+    "#gpio-cells":
+      const: 2
+
+gpio-cells:
+  - pin
+  - flags

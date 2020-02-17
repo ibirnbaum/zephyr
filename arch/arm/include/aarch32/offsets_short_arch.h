@@ -36,6 +36,15 @@
 #endif
 #endif
 
+#if defined(CONFIG_FLOAT) && defined(CONFIG_ARMV7_A)
+#define _preempt_float_offset_to_d00 \
+	(_thread_offset_to_preempt_float + ___preempt_float_t_d00_OFFSET)
+#define _preempt_float_offset_to_d16 \
+	(_thread_offset_to_preempt_float + ___preempt_float_t_d16_OFFSET)
+#define _preempt_float_offset_to_fpscr \
+	(_thread_offset_to_preempt_float + ___preempt_float_t_fpscr_OFFSET)
+#endif
+
 /* end - threads */
 
 #endif /* ZEPHYR_ARCH_ARM_INCLUDE_AARCH32_OFFSETS_SHORT_ARCH_H_ */

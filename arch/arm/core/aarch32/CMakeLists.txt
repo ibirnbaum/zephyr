@@ -34,4 +34,7 @@ add_subdirectory_ifdef(CONFIG_ARM_NONSECURE_FIRMWARE cortex_m/tz)
 
 add_subdirectory_ifdef(CONFIG_CPU_CORTEX_R cortex_r)
 
+add_subdirectory_ifdef(CONFIG_CPU_CORTEX_A cortex_a)
+add_subdirectory_ifdef(CONFIG_ARMV7_A_MMU cortex_a/mmu)
+
 zephyr_linker_sources(ROM_START SORT_KEY 0x0vectors vector_table.ld)

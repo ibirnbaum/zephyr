@@ -26,7 +26,9 @@
 
 #include <zephyr/types.h>
 #include <stdbool.h>
+#if !(defined CONFIG_ARMV7_A || defined CONFIG_ARMV7_R)
 #include <arch/arm/aarch32/cortex_m/cmsis.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -175,7 +177,11 @@ static inline bool arch_is_user_context(void)
 
 	/* if not handler mode, return mode information */
 	__asm__ volatile("mrs %0, CONTROL\n\t" : "=r"(value));
+	#if !(defined CONFIG_ARMV7_A || defined CONFIG_ARMV7_R)
 	return (value & CONTROL_nPRIV_Msk) ? true : false;
+	#else
+	return (value & 0x1) ? true : false;
+	#endif
 }
 
 #ifdef __cplusplus

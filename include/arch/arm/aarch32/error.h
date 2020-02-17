@@ -52,7 +52,8 @@ do { \
 		: [reason] "i" (reason_p), [id] "i" (_SVC_CALL_RUNTIME_EXCEPT) \
 		: "memory"); \
 } while (false)
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 /* Pick up the default definition in kernel.h for now */
 #else
 #error Unknown ARM architecture

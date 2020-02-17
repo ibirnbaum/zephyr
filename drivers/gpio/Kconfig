@@ -69,4 +69,6 @@ source "drivers/gpio/Kconfig.lmp90xxx"
 
 source "drivers/gpio/Kconfig.litex"
 
+source "drivers/gpio/Kconfig.xlnx_axi"
+
 endif # GPIO

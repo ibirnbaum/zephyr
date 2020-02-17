@@ -7,9 +7,9 @@
 
 /**
  * @file
- * @brief Fault handlers for ARM Cortex-M and Cortex-R
+ * @brief Fault handlers for ARM Cortex-M / Cortex-R / Cortex-A
  *
- * Fault handlers for ARM Cortex-M and Cortex-R processors.
+ * Fault handlers for ARM Cortex-M, Cortex-R and Cortex-A processors.
  */
 
 #include <toolchain.h>
@@ -30,7 +30,8 @@ GTEXT(z_arm_usage_fault)
 GTEXT(z_arm_secure_fault)
 #endif /* CONFIG_ARM_SECURE_FIRMWARE*/
 GTEXT(z_arm_debug_monitor)
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 GTEXT(z_arm_undef_instruction)
 GTEXT(z_arm_prefetch_abort)
 GTEXT(z_arm_data_abort)
@@ -53,8 +54,8 @@ GTEXT(z_arm_reserved)
  * as parameters to the z_arm_fault() C function that will perform the
  * rest of the fault handling (i.e. z_arm_fault(MSP, PSP, EXC_RETURN)).
  *
- * For Cortex-R: the function simply invokes z_arm_fault() with currently
- * unused arguments.
+ * For Cortex-R / Cortex-A: the function simply invokes z_arm_fault() with 
+ * currently unused arguments.
  *
  * Provides these symbols:
  *
@@ -78,7 +79,8 @@ SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_usage_fault)
 SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_secure_fault)
 #endif /* CONFIG_ARM_SECURE_FIRMWARE */
 SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_debug_monitor)
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_undef_instruction)
 SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_prefetch_abort)
 SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_data_abort)
@@ -94,7 +96,8 @@ SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_reserved)
 	mov r2, lr /* EXC_RETURN */
 
 	push {r0, lr}
-#elif defined(CONFIG_ARMV7_R)
+#elif defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 	/*
 	 * Pass null for the esf to z_arm_fault for now. A future PR will add
 	 * better exception debug for Cortex-R that subsumes what esf
@@ -109,7 +112,8 @@ SECTION_SUBSEC_FUNC(TEXT,__fault,z_arm_reserved)
 
 #if defined(CONFIG_CPU_CORTEX_M)
 	pop {r0, pc}
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 	pop {r0, lr}
 	subs pc, lr, #8
 #endif

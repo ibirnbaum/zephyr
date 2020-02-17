@@ -52,6 +52,9 @@ int arch_swap(unsigned int key)
 #elif defined(CONFIG_CPU_CORTEX_R)
 	z_arm_cortex_r_svc();
 	irq_unlock(key);
+#elif defined(CONFIG_CPU_CORTEX_A)
+    z_arm_cortex_a_svc();
+    irq_unlock(key);
 #endif
 
 	/* Context switch is performed here. Returning implies the

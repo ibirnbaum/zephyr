@@ -3,6 +3,13 @@
 # Copyright (c) 2018 Nordic Semiconductor ASA.
 # SPDX-License-Identifier: Apache-2.0
 
+config CPU_HAS_ARM_MMU
+	bool
+	select CPU_HAS_MMU
+	help
+	  This option is enabled when the CPU has a Memory Management Unit (MMU)
+	  in ARM flavor.
+
 config CPU_HAS_ARM_MPU
 	bool
 	select CPU_HAS_MPU
@@ -43,7 +50,7 @@ config CPU_HAS_NRF_IDAU
 
 config CPU_HAS_FPU_DOUBLE_PRECISION
 	bool
-	depends on CPU_CORTEX_M7
+	depends on CPU_CORTEX_M7 || CPU_CORTEX_A
 	select CPU_HAS_FPU
 	help
 	  When enabled, indicates that the SoC has a double

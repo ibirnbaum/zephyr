@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/dts-v1/;
+
+#include <xilinx/zynq7000.dtsi>
+
+/ {
+	model = "QEMU Cortex-A9";
+	compatible = "xilinx,zynq7000-qemu";
+	interrupt-parent = <&gicpl390>;
+
+	sram0: memory@100000 {
+		compatible = "mmio-sram";
+		reg = <0x00100000 DT_SIZE_M(512)>;
+	};
+
+	flash0: flash@0 {
+		reg = <0x00000000 DT_SIZE_M(256)>;
+	};
+
+	aliases {
+		gicpl390 = &gicpl390;
+		sram0    = &sram0;
+		flash0   = &flash0;
+		uart0    = &uart0;
+		uart1    = &uart1;
+		ttc0     = &ttc0;
+		ttc1     = &ttc1;
+		eth0     = &eth0;
+		eth1     = &eth1;
+	};
+
+	chosen {
+		zephyr,flash      = &flash0;
+		zephyr,sram       = &sram0;
+		zephyr,console    = &uart0;
+		zephyr,shell-uart = &uart0;
+	};
+};
+

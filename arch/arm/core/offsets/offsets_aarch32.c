@@ -36,8 +36,14 @@ GEN_OFFSET_SYM(_thread_arch_t, priv_stack_start);
 #endif
 #endif
 
-#if defined(CONFIG_FLOAT) && defined(CONFIG_FP_SHARING)
+#if defined(CONFIG_FLOAT) && \
+	(defined(CONFIG_FP_SHARING) || defined(CONFIG_ARMV7_A))
 GEN_OFFSET_SYM(_thread_arch_t, preempt_float);
+#ifdef CONFIG_ARMV7_A
+GEN_OFFSET_SYM(_preempt_float_t, d00);
+GEN_OFFSET_SYM(_preempt_float_t, d16);
+GEN_OFFSET_SYM(_preempt_float_t, fpscr);
+#endif
 #endif
 
 GEN_OFFSET_SYM(_basic_sf_t, a1);
@@ -49,8 +55,14 @@ GEN_OFFSET_SYM(_basic_sf_t, lr);
 GEN_OFFSET_SYM(_basic_sf_t, pc);
 GEN_OFFSET_SYM(_basic_sf_t, xpsr);
 
-#if defined(CONFIG_FLOAT) && defined(CONFIG_FP_SHARING)
+#if defined(CONFIG_FLOAT) && \
+	(defined(CONFIG_FP_SHARING) || defined(CONFIG_ARMV7_A))
+#ifndef CONFIG_ARMV7_A
 GEN_OFFSET_SYM(_esf_t, s);
+#else
+GEN_OFFSET_SYM(_esf_t, d);
+GEN_OFFSET_SYM(_esf_t, fpexc);
+#endif
 GEN_OFFSET_SYM(_esf_t, fpscr);
 #endif
 
@@ -65,7 +77,8 @@ GEN_OFFSET_SYM(_callee_saved_t, v6);
 GEN_OFFSET_SYM(_callee_saved_t, v7);
 GEN_OFFSET_SYM(_callee_saved_t, v8);
 GEN_OFFSET_SYM(_callee_saved_t, psp);
-#if defined(CONFIG_CPU_CORTEX_R)
+#if defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 GEN_OFFSET_SYM(_callee_saved_t, spsr);
 GEN_OFFSET_SYM(_callee_saved_t, lr);
 #endif

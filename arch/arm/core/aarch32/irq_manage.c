@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ARM Cortex-M and Cortex-R interrupt management
+ * @brief ARM Cortex-M / Cortex-R / Cortex-A interrupt management
  *
  *
  * Interrupt management: enabling/disabling and dynamic ISR
@@ -18,7 +18,8 @@
 #include <arch/cpu.h>
 #if defined(CONFIG_CPU_CORTEX_M)
 #include <arch/arm/aarch32/cortex_m/cmsis.h>
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 #include <device.h>
 #include <irq_nextlevel.h>
 #endif
@@ -96,19 +97,28 @@ void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, u32_t flags)
 	NVIC_SetPriority((IRQn_Type)irq, prio);
 }
 
-#elif defined(CONFIG_CPU_CORTEX_R)
+#elif defined(CONFIG_CPU_CORTEX_R) \
+	|| defined(CONFIG_CPU_CORTEX_A)
 void arch_irq_enable(unsigned int irq)
 {
 	struct device *dev = _sw_isr_table[0].arg;
 
+	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_enable_next_level(dev, (irq >> 8) - 1);
+	#else
+	irq_enable_next_level(dev, (irq - 1));
+	#endif
 }
 
 void arch_irq_disable(unsigned int irq)
 {
 	struct device *dev = _sw_isr_table[0].arg;
 
+	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_disable_next_level(dev, (irq >> 8) - 1);
+	#else
+	irq_disable_next_level(dev, (irq - 1));
+	#endif
 }
 
 int arch_irq_is_enabled(unsigned int irq)
@@ -137,7 +147,11 @@ void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, u32_t flags)
 	if (irq == 0)
 		return;
 
+	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_set_priority_next_level(dev, (irq >> 8) - 1, prio, flags);
+	#else
+	irq_set_priority_next_level(dev, (irq - 1), prio, flags);
+	#endif
 }
 
 #endif
@@ -163,7 +177,8 @@ void z_irq_spurious(void *unused)
 void _arch_isr_direct_pm(void)
 {
 #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE) \
-	|| defined(CONFIG_ARMV7_R)
+	|| defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 	unsigned int key;
 
 	/* irq_lock() does what we wan for this CPU */
@@ -186,7 +201,8 @@ void _arch_isr_direct_pm(void)
 	}
 
 #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE) \
-	|| defined(CONFIG_ARMV7_R)
+	|| defined(CONFIG_ARMV7_R) \
+	|| defined(CONFIG_ARMV7_A)
 	irq_unlock(key);
 #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 	__asm__ volatile("cpsie i" : : : "memory");
