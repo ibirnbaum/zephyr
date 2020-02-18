@@ -9,6 +9,10 @@
 /*
  * IP core documentation used:
  * Xilinx AXI GPIO v2.0 LogiCORE IP Product Guide PG144 dated October 5, 2016
+ * NOTICE: this driver only supports the AXI GPIO IP core in single channel
+ * operation mode. While pin access in index-based and could therefore handle
+ * the dual-channel mode range [0..63], the bit masks of the callback API
+ * are limited to 32 bits.
  */
 
 #include <kernel.h>

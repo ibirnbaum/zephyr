@@ -221,7 +221,9 @@ void z_arm_prep_c(void)
 	&& defined(CONFIG_INIT_STACKS)
 	z_arm_init_stacks();
 #endif
+#ifdef CONFIG_CPU_CORTEX_M
 	z_arm_int_lib_init();
+#endif
 	z_cstart();
 	CODE_UNREACHABLE;
 }

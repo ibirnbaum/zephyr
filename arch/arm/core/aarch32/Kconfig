@@ -38,9 +38,7 @@ config CPU_CORTEX_R
 config CPU_CORTEX_A
 	bool
 	select CPU_CORTEX
-	select CPU_HAS_MMU
-	select CPU_HAS_FPU
-	select CPU_HAS_FPU_DOUBLE_PRECISION
+	select HAS_FLASH_LOAD_OFFSET
 	help
 	  This option signifies the use of a CPU of the Cortex-A family.
 
