@@ -355,8 +355,9 @@ _thread_irq_disabled:
 
     add r3, r2, #_preempt_float_offset_to_fpscr
 
-    ldr r0, [r3, #0]
-    ldr r1, [r3, #4]
+    /*ldr r0, [r3, #0]
+    ldr r1, [r3, #4]*/
+    ldm r3, {r0-r1}^
 
     vmsr fpscr, r0
     vmsr fpexc, r1

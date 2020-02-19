@@ -11,11 +11,6 @@
 
 #include <arch/cpu.h>
 
-u32_t sys_rand32_get(void)
-{
-    return 0xDEADBEEF;
-}
-
 /**
  *
  * @brief Perform basic hardware initialization

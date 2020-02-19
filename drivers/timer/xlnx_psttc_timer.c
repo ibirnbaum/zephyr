@@ -7,11 +7,21 @@
 #include <sys_clock.h>
 #include "irq.h"
 #include "legacy_api.h"
+#include <soc.h> /* for CPU_1X frequency definition */
 
 #define TIMER_FREQ          CONFIG_SYS_CLOCK_TICKS_PER_SEC
 
 #if (CONFIG_XLNX_PSTTC_TIMER_INDEX == 0)
-#define TIMER_INPUT_CLKHZ   DT_INST_0_CDNS_TTC_CLOCK_FREQUENCY
+
+#if (defined CONFIG_ZYNQ_CPU_1X_FREQUENCY)
+#define TIMER_INPUT_CLKHZ		CONFIG_ZYNQ_CPU_1X_FREQUENCY
+#elif (defined DT_INST_0_CDNS_TTC_CLOCK_FREQUENCY)
+#define TIMER_INPUT_CLKHZ		DT_INST_0_CDNS_TTC_CLOCK_FREQUENCY
+#warning Zynq cpu_1x frequency not defined, falling back to DT_INST_0_CDNS_TTC_CLOCK_FREQUENCY
+#else
+#error Clock frequency not configured for Xilinx PS TTC driver
+#endif
+
 #define TIMER_IRQ           DT_INST_0_CDNS_TTC_IRQ_0
 #define TIMER_BASEADDR      DT_INST_0_CDNS_TTC_BASE_ADDRESS
 #else
@@ -59,22 +69,24 @@
 static u32_t accumulated_cycles;
 static s32_t _sys_idle_elapsed_ticks = 1;
 
-static int xttc_calculate_interval(u32_t *interval, u8_t *prescaler)
+static int xttc_calculate_interval(u32_t *interval, u8_t *prescaler, u8_t *prescaler_en)
 {
-	u32_t tmpinterval = 0;
-	u8_t tmpprescaler = 0;
-	unsigned int tmpval;
+	u32_t tmpinterval  = 0;
+	u8_t  tmpprescaler = 0;
+	u8_t  tmppresc_en  = 0;
+	u32_t tmpval       = 0;
 
 	tmpval = (u32_t)(TIMER_INPUT_CLKHZ / TIMER_FREQ);
 
 	if (tmpval < (u32_t)65536U) {
 		/* no prescaler is required */
-		tmpinterval = tmpval;
+		tmpinterval  = tmpval;
 		tmpprescaler = 0;
 	} else {
-		for (tmpprescaler = 1U; tmpprescaler < 16; tmpprescaler++) {
-			tmpval = (u32_t)(TIMER_INPUT_CLKHZ /
-					 (TIMER_FREQ * (1U << tmpprescaler)));
+		tmppresc_en = 1;
+
+		for (tmpprescaler = 0U; tmpprescaler < 16; tmpprescaler++) {
+			tmpval = (u32_t)((TIMER_INPUT_CLKHZ / (2 << tmpprescaler)) / TIMER_FREQ);
 			if (tmpval < (u32_t)65536U) {
 				tmpinterval = tmpval;
 				break;
@@ -83,8 +95,9 @@ static int xttc_calculate_interval(u32_t *interval, u8_t *prescaler)
 	}
 
 	if (tmpinterval != 0) {
-		*interval = tmpinterval;
-		*prescaler = tmpprescaler;
+		*interval     = tmpinterval;
+		*prescaler    = tmpprescaler;
+		*prescaler_en = tmppresc_en;
 		return 0;
 	}
 
@@ -128,6 +141,7 @@ int z_clock_driver_init(struct device *device)
 	int ret;
 	u32_t interval;
 	u8_t prescaler;
+	u8_t prescaler_en;
 	u32_t regval;
 
 	/* Stop timer */
@@ -135,7 +149,7 @@ int z_clock_driver_init(struct device *device)
 		    TIMER_BASEADDR + XTTCPS_CNT_CNTRL_OFFSET);
 
 	/* Calculate prescaler */
-	ret = xttc_calculate_interval(&interval, &prescaler);
+	ret = xttc_calculate_interval(&interval, &prescaler, &prescaler_en);
 	if (ret < 0) {
 		printk("Failed to calculate prescaler.\n");
 		return ret;
@@ -161,9 +175,9 @@ int z_clock_driver_init(struct device *device)
 	regval |= XTTCPS_CNT_CNTRL_INT_MASK;
 	sys_write32(regval, TIMER_BASEADDR + XTTCPS_CNT_CNTRL_OFFSET);
 
-	/* Set interval and prescaller */
+	/* Set interval and prescaler */
 	sys_write32(interval, TIMER_BASEADDR + XTTCPS_INTERVAL_VAL_OFFSET);
-	regval = (u32_t)((prescaler & 0xFU) << 1);
+	regval = (u32_t)(((prescaler & 0xFU) << 1) | (u32_t)prescaler_en); /* PS EN = bit [0] */
 	sys_write32(regval, TIMER_BASEADDR + XTTCPS_CLK_CNTRL_OFFSET);
 
 	/* Enable timer interrupt */

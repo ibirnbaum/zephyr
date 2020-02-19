@@ -15,7 +15,7 @@ config CPU_CORTEX_A9
 	select CPU_CORTEX_A
 	select ARMV7_A
 	select ARMV7_A_FP if CPU_HAS_FPU
-	select ARMV7_A_MMU if CPU_HAS_MMU
+	select ARMV7_A_MMU if CPU_HAS_ARM_MMU
 	help
 	  This option signifies the use of a Cortex-A9 CPU
 

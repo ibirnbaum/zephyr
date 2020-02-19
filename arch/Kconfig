@@ -462,6 +462,11 @@ config CPU_HAS_MPU
 	help
 	  This option is enabled when the CPU has a Memory Protection Unit (MPU).
 
+config CPU_HAS_MMU
+	bool
+	help
+	  This option is enabled when the CPU has a Memory Management Unit (MMU).
+
 config MEMORY_PROTECTION
 	bool
 	help
