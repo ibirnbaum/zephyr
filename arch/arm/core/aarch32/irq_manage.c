@@ -103,22 +103,14 @@ void arch_irq_enable(unsigned int irq)
 {
 	struct device *dev = _sw_isr_table[0].arg;
 
-	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_enable_next_level(dev, (irq >> 8) - 1);
-	#else
-	irq_enable_next_level(dev, (irq - 1));
-	#endif
 }
 
 void arch_irq_disable(unsigned int irq)
 {
 	struct device *dev = _sw_isr_table[0].arg;
 
-	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_disable_next_level(dev, (irq >> 8) - 1);
-	#else
-	irq_disable_next_level(dev, (irq - 1));
-	#endif
 }
 
 int arch_irq_is_enabled(unsigned int irq)
@@ -147,11 +139,7 @@ void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, u32_t flags)
 	if (irq == 0)
 		return;
 
-	#if defined(CONFIG_CPU_CORTEX_R)
 	irq_set_priority_next_level(dev, (irq >> 8) - 1, prio, flags);
-	#else
-	irq_set_priority_next_level(dev, (irq - 1), prio, flags);
-	#endif
 }
 
 #endif

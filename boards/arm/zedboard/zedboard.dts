@@ -34,7 +34,7 @@
         gpio-controller;
         compatible = "xlnx,axi-gpio";
         reg = <0x40010000 0x10000>;
-        interrupts = <62 (1 << 3) 0x1>;
+        interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
         interrupt-names = "irq_0";
         #gpio-cells = <2>;
         status = "okay";

@@ -45,12 +45,6 @@ source "drivers/interrupt_controller/Kconfig.loapic"
 
 source "drivers/interrupt_controller/Kconfig.dw"
 
-config GIC_PL390
-	bool "ARM Generic Interrupt Controller (GIC PL-390)"
-	depends on CPU_CORTEX_A
-	help
-	  The ARM Generic Interrupt Controller works with Cortex-A processors.
-
 source "drivers/interrupt_controller/Kconfig.stm32"
 
 source "drivers/interrupt_controller/Kconfig.cavs"

@@ -7,7 +7,7 @@
 
 #include <mem.h>
 #include <arm/armv7-a.dtsi>
-#include <dt-bindings/interrupt-controller/arm-gic-pl390.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
     soc {
@@ -25,11 +25,11 @@
         };
 
         gicpl390: interrupt-controller@f8f01000 {
-            compatible = "arm,v7a-gic-pl390";
+            compatible = "arm,gic";
             reg = <0xf8f01000 0x1000>,
                   <0xf8f00100 0x100>;
             interrupt-controller;
-            #interrupt-cells = <3>;
+            #interrupt-cells = <4>;
             label = "gic-pl390";
             status = "okay";
         };
@@ -38,8 +38,8 @@
             compatible = "xlnx,emacps";
             reg = <0xe000b000 0x1000>;
             status = "okay";
-            interrupts = <55 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <56 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 23 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0", "irq_1";
             label = "eth0";
             local-mac-address = [00 80 41 01 02 03];
@@ -49,8 +49,8 @@
             compatible = "xlnx,emacps";
             reg = <0xe000c000 0x1000>;
             status = "okay";
-            interrupts = <78 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <79 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 46 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0", "irq_1";
             label = "eth1";
             local-mac-address = [00 80 41 02 03 04];
@@ -60,7 +60,7 @@
             compatible = "xlnx,xuartps";
             reg = <0xe0000000 0x4c>;
             status = "okay";
-            interrupts = <60 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0";
             label = "uart0";
             current-speed = <115200>;
@@ -71,7 +71,7 @@
             compatible = "xlnx,xuartps";
             reg = <0xe0001000 0x4c>;
             status = "okay";
-            interrupts = <83 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0";
             label = "uart1";
             current-speed = <115200>;
@@ -81,9 +81,9 @@
         ttc0: timer@f8001000 {
             compatible = "cdns,ttc";
             status = "okay";
-            interrupts = <43 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <44 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <45 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 11 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 12 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0", "irq_1", "irq_2";
             reg = <0xf8001000 0x1000>;
             clock-frequency = <111111111>;
@@ -93,9 +93,9 @@
         ttc1: timer@f8002000 {
             compatible = "cdns,ttc";
             status = "disabled";
-            interrupts = <70 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <71 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>,
-                         <72 IRQ_DEFAULT_PRIORITY SPI_IRQ_HIGH_LEVEL>;
+            interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 38 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+                         <GIC_SPI 39 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
             interrupt-names = "irq_0", "irq_1", "irq_2";
             reg = <0xf8002000 0x1000>;
             clock-frequency = <111111111>;
