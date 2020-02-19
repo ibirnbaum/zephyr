@@ -10,14 +10,13 @@ config SOC
 config NUM_IRQS
 	int
 	# must be >= the highest interrupt number used
-	# - include the UART interrupts
 	default 96
 
 config 2ND_LVL_ISR_TBL_OFFSET
 	default 1
 
 config MAX_IRQ_PER_AGGREGATOR
-	default 96
+	default 95
 
 config NUM_2ND_LEVEL_AGGREGATORS
 	default 1
