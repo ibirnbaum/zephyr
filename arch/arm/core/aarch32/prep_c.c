@@ -126,13 +126,9 @@ static inline void enable_floating_point(void)
 	 * [29..00]    = Subarchitecture defined -> not relevant here.
 	 */
 
-	/*__asm__ __volatile__ ("vmrs %0, fpexc" : "=r"(reg_val));*/
-	/* reg_val |= (1 << 30); */ /* Set the EN bit */
-	/*__asm__ __volatile__ ("vmsr fpexc,%0" : : "r"(reg_val));*/
-
-	__asm__ __volatile__ ("mrc p10,7,%0,c8,c0,0" : "=r"(reg_val));
+	__asm__ __volatile__ ("vmrs %0, fpexc" : "=r"(reg_val));
 	reg_val |= (1 << 30); /* Set the EN bit */
-	__asm__ __volatile__ ("mcr p10,7,%0,c8,c0,0" : : "r"(reg_val));
+	__asm__ __volatile__ ("vmsr fpexc,%0" : : "r"(reg_val));
 }
 #else /* !CONFIG_CPU_CORTEX_A, effectively: CONFIG_CPU_CORTEX_M */
 static inline void enable_floating_point(void)
