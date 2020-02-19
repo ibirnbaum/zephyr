@@ -360,6 +360,13 @@ _thread_irq_disabled:
     ldm r3, {r0-r1}^
 
     vmsr fpscr, r0
+    
+    /* read-modify-write FPEXC in order to preserve the enable bit */
+    vmrs r0, fpexc
+    mov r3, #1
+    ror r3, r3, #2
+    and r0, r0, r3
+    orr r1, r1, r0
     vmsr fpexc, r1
 
     ldr r1, =_kernel
