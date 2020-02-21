@@ -17,11 +17,13 @@
 
 #include <kernel.h>
 #include <device.h>
+#include <errno.h>
 
 #include <drivers/gpio.h>
 #include "gpio_utils.h"
 
-#include <errno.h>
+#include <logging/log.h>
+LOG_MODULE_REGISTER(gpio_xlnx_axi);
 
 #define GPIO_XLNX_AXI_PINS_PER_CHANNEL			32
 
@@ -35,6 +37,8 @@
 #define GPIO_XLNX_AXI_CH1_INT_ENABLE			(1 <<  0)
 #define GPIO_XLNX_AXI_CH1_INT_DISABLE			(0 <<  0)
 #define GPIO_XLNX_AXI_CH1_INT_PENDING			(1 <<  0)
+
+#define LOG_LEVEL CONFIG_GPIO_LOG_LEVEL
 
 typedef void (*gpio_xlnx_axi_config_irq_t)(struct device*);
 static void gpio_xlnx_axi_config_interrupt(struct device* dev);
@@ -82,7 +86,7 @@ static void gpio_xlnx_axi_isr (void *arg)
 	u32_t							pin_mask     = 0;
 
 	isr_reg_val = sys_read32(dev_conf->base_addr + dev_conf->ip_isr_reg_offset);
-	if ((isr_reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) == GPIO_XLNX_AXI_CH1_INT_PENDING) {
+	if (isr_reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) {
 		curr_in_data  = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset);
 		curr_in_data ^= dev_data->invert_mask;
 		curr_in_data &= ~dev_data->pin_dir;
@@ -99,150 +103,234 @@ static void gpio_xlnx_axi_isr (void *arg)
 	}
 }
 
-static int gpio_xlnx_axi_config (
-	struct device *dev,
-	int access_op,
-	u32_t pin,
-	int flags)
+static int gpio_xlnx_axi_pin_config (
+	struct device	*dev, 
+	gpio_pin_t		pin, 
+	gpio_flags_t	flags)
 {
 	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 
-	if (flags & GPIO_INT)
-	{
-		 if (    (dev_conf->supp_interrupt == 0)
-			  || (flags & GPIO_INT_ACTIVE_LOW)
-		 	  || (flags & GPIO_INT_EDGE)
-			  || (flags & GPIO_INT_DOUBLE_EDGE)
-			  || (flags & GPIO_INT_DEBOUNCE)) {
-			 return -ENOTSUP;
-		 }
-
-		 dev_data->use_interrupt = 1;
-	}
-
-	if ((flags & GPIO_PUD_PULL_UP) || (flags & GPIO_PUD_PULL_DOWN)) {
-		return -ENOTSUP;
-	}
-
-	if (access_op == GPIO_ACCESS_BY_PORT) {
-		if (flags & GPIO_DIR_OUT) {
-			dev_data->pin_dir = 0xFFFFFFFF;
-		} else {
-			dev_data->pin_dir = 0x00000000;
-		}
-
-		if (flags & GPIO_POL_INV) {
-			dev_data->invert_mask = 0xFFFFFFFF;
-		} else {
-			dev_data->invert_mask = 0x00000000;
-		}
-
-		if (flags & GPIO_INT) {
-			dev_data->int_mask = 0xFFFFFFFF;
-			dev_data->use_interrupt = 1;
-		} else {
-			dev_data->int_mask = 0x00000000;
-			dev_data->use_interrupt = 0;
-		}
-	} else {
-		if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
-			return -EINVAL;
-		}
-
-		if (flags & GPIO_DIR_OUT) {
-			dev_data->pin_dir |= (1 << pin);
-		} else {
-			dev_data->pin_dir &= ~(1 << pin);
-		}
-
-		if (flags & GPIO_POL_INV) {
-			dev_data->invert_mask |= (1 << pin);
-		} else {
-			dev_data->invert_mask &= ~(1 << pin);
-		}
-
-		if (flags & GPIO_INT) {
-			dev_data->int_mask |= (1 << pin);
-			dev_data->use_interrupt = 1;
-		} else {
-			dev_data->int_mask &= ~(1 << pin);
-			if (dev_data->int_mask == 0x00000000) {
-				dev_data->use_interrupt = 0;
-			}
-		}
-	}
-
-	sys_write32(~(dev_data->pin_dir), dev_conf->base_addr + dev_conf->tri_reg_offset);
-	dev_data->last_data = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset)
-		^ (dev_data->invert_mask & ~dev_data->pin_dir);
-
-	return 0;
-}
-
-static int gpio_xlnx_axi_write(
-	struct device *dev,
-	int access_op,
-	u32_t pin,
-	u32_t value)
-{
-	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
-	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	/* Pre-condition checks */
 
 	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
+		/* Pin index exceeds the valid range. */
 		return -EINVAL;
 	}
 
-	if (access_op == GPIO_ACCESS_BY_PORT) {
-		dev_data->last_data &= ~dev_data->pin_dir;
-		dev_data->last_data |= ((value ^ dev_data->invert_mask) & dev_data->pin_dir);
-	} else {
-		if (((dev_data->pin_dir >> pin) & 0x1) == 0) {
-			return -EINVAL;
-		}
-		dev_data->last_data &= ~(1 << pin);
-		dev_data->last_data |= (((value & 0x1) ^ ((dev_data->invert_mask >> pin) & 0x1)) << pin);
+	if (((flags & GPIO_INPUT) == 0) && ((flags & GPIO_OUTPUT) == 0)) {
+		/* No direction specified for the respective pin. */
+		return -ENOTSUP;
 	}
 
-	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	if (((flags & GPIO_INPUT) != 0) && ((flags & GPIO_OUTPUT) != 0)) {
+		/* Bi-directional GPIO pins are not supported by the AXI GPIO IP Core. */
+		return -ENOTSUP;
+	}
+
+	if ((flags & GPIO_PULL_UP) || (flags & GPIO_PULL_DOWN)) {
+		/* No such option for the AXI GPIO IP Core. */
+		return -ENOTSUP;
+	}
+
+	/* Store the respective pin's configuration in the current device's run-time
+	 * data section, update AXI GPIO IP Core register contents accordingly. */
+
+	if (flags & GPIO_OUTPUT) {
+		dev_data->pin_dir |= BIT(pin);
+	} else  if (flags & GPIO_INPUT) {
+		dev_data->pin_dir &= ~BIT(pin);
+	}
+
+	if (flags & GPIO_ACTIVE_LOW) {
+		dev_data->invert_mask |= BIT(pin);
+	} else {
+		dev_data->invert_mask &= ~BIT(pin);
+	}
+
+	/* Update the pin direction register */
+	sys_write32(~(dev_data->pin_dir), dev_conf->base_addr + dev_conf->tri_reg_offset);
+
+	/* Read the current data register contents as reference for pin level
+	 * change detection.*/
+
+	dev_data->last_data = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset)
+		^ (dev_data->invert_mask & ~dev_data->pin_dir);
+
+	/* If an initial value was specified for the pin, adjust the data register
+	 * accordingly and store the initial value locally. */
+
+	if ((flags & GPIO_OUTPUT) 
+		&& (flags & (GPIO_OUTPUT_INIT_LOW | GPIO_OUTPUT_INIT_HIGH))) {
+
+		if (flags & GPIO_OUTPUT_INIT_LOW) {
+			dev_data->last_data |= BIT(pin);
+		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			dev_data->last_data &= ~BIT(pin);
+		}
+
+		sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	}
 
 	return 0;
 }
 
-static int gpio_xlnx_axi_read(
-	struct device *dev,
-	int access_op,
-	u32_t pin,
-	u32_t *value)
+static int gpio_xlnx_axi_port_get_raw (
+	struct device		*dev, 
+	gpio_port_value_t	*value)
 {
 	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
-	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
-		return -EINVAL;
-	}
-
 	reg_val  = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset);
 	reg_val ^= dev_data->invert_mask;
 	reg_val &= ~dev_data->pin_dir;
 
+	/* Store the data just read as reference for future pin level
+	 * change detection. */
+
 	dev_data->last_data &= dev_data->pin_dir;
 	dev_data->last_data |= reg_val;
 
-	if (access_op == GPIO_ACCESS_BY_PORT) {
-		*value = dev_data->last_data;
+	*value = (gpio_port_value_t)reg_val;
+	return 0;
+}
+
+static int gpio_xlnx_axi_port_set_masked_raw (
+	struct device 		*dev, 
+	gpio_port_pins_t 	mask,
+	gpio_port_value_t 	value)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	u32_t							reg_val   = 0;
+	u32_t							reg_msk   = 0;
+
+	reg_val = (u32_t)value;
+	reg_msk = (u32_t)mask;
+
+    reg_val ^= dev_data->invert_mask;
+	reg_val &= dev_data->pin_dir;
+	reg_msk &= dev_data->pin_dir;
+	reg_val &= reg_msk;
+
+	dev_data->last_data &= ~dev_data->pin_dir;
+	dev_data->last_data |= reg_val;
+	
+	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	return 0;
+}
+
+static int gpio_xlnx_axi_port_set_bits_raw (
+	struct device 		*dev, 
+	gpio_port_pins_t	pins)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	u32_t							reg_val   = 0;
+
+	reg_val  = (u32_t)pins;
+    reg_val ^= dev_data->invert_mask;
+	reg_val &= dev_data->pin_dir;
+
+	dev_data->last_data |= reg_val;
+
+	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	return 0;
+}
+
+static int gpio_xlnx_axi_port_clear_bits_raw (
+	struct device 		*dev, 
+	gpio_port_pins_t	pins)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	u32_t							reg_val   = 0;
+
+	reg_val  = (u32_t)pins;
+	reg_val &= dev_data->pin_dir;
+    reg_val ^= (dev_data->invert_mask & dev_data->pin_dir);
+	reg_val  = ~reg_val;
+	reg_val |= ~(dev_data->pin_dir);
+
+	dev_data->last_data &= reg_val;
+
+	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	return 0;
+}
+
+static int gpio_xlnx_axi_port_toggle_bits (
+	struct device 		*dev, 
+	gpio_port_pins_t	pins)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	u32_t							reg_val   = 0;
+
+	reg_val  = (u32_t)pins;
+	reg_val ^= dev_data->invert_mask;
+	reg_val &= dev_data->pin_dir;
+
+	dev_data->last_data ^= reg_val;
+
+	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
+	return 0;
+}
+
+static int gpio_xlnx_axi_pin_interrupt_configure (
+	struct device		*dev, 
+	gpio_pin_t 			pin,
+	enum gpio_int_mode	mode, 
+	enum gpio_int_trig	trig)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+
+	/* Precondition checks */
+
+	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
+		/* Pin index exceeds the valid range. */
+		return -EINVAL;
+	}
+
+	if (dev_conf->supp_interrupt == 0) {
+		/* Interrupt not supported by the current instance. */
+		return -ENOTSUP;
+	}
+
+	if (mode == GPIO_INT_MODE_DISABLED) {
+
+		dev_data->int_mask &= ~BIT(pin);
+
+		if (dev_data->int_mask == 0x00000000) {
+			dev_data->use_interrupt = 0;
+		}
+
+	} else if (mode == GPIO_INT_MODE_EDGE) {
+
+		dev_data->int_mask      |= BIT(pin);
+		dev_data->use_interrupt  = 1;
+
 	} else {
-		*value = (dev_data->last_data >> pin) & 0x1;
+		/* The interrupt of the AXI GPIO IP core is triggered whenever
+		 * a level change of *any* pin is detected. It is only during
+		 * the handling of such an interrupt that the current value
+		 * of the input pins can be compared against the last known
+		 * value. Therefore, the AXI GPIO IP core implements edge-
+		 * triggered interrupt behaviour, level triggered interrupts
+		 * are unsupported. */
+
+		return -ENOTSUP;
 	}
 
 	return 0;
 }
 
-static int gpio_xlnx_axi_manage_callback(
-	struct device *dev,
-	struct gpio_callback *callback,
-	bool set)
+static int gpio_xlnx_axi_manage_callback (
+	struct device 			*dev,
+	struct gpio_callback	*callback,
+	bool 					set) 
 {
 	struct gpio_xlnx_axi_dev_cfg  *dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data *dev_data = DEV_DATA(dev);
@@ -254,10 +342,9 @@ static int gpio_xlnx_axi_manage_callback(
 	return gpio_manage_callback(&dev_data->callbacks, callback, set);
 }
 
-static int gpio_xlnx_axi_enable_callback(
-	struct device *dev,
-	int access_op,
-	u32_t pin)
+static int gpio_xlnx_axi_enable_callback (
+	struct device 	*dev, 
+	gpio_pin_t 		pin) 
 {
 	struct gpio_xlnx_axi_dev_cfg  	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data 	*dev_data = DEV_DATA(dev);
@@ -270,23 +357,18 @@ static int gpio_xlnx_axi_enable_callback(
 		return -EINVAL;
 	}
 
-	if (access_op == GPIO_ACCESS_BY_PORT) {
-		dev_data->callback_mask = 0xFFFFFFFF;
-	} else {
-		dev_data->callback_mask |= (1 << pin);
-	}
+	dev_data->callback_mask |= BIT(pin);
 
-	sys_write32(GPIO_XLNX_AXI_CH1_INT_ENABLE, dev_conf->base_addr + dev_conf->ip_ier_reg_offset);
+	sys_write32(GPIO_XLNX_AXI_CH1_INT_ENABLE, (dev_conf->base_addr + dev_conf->ip_ier_reg_offset));
 	return 0;
 }
 
-static int gpio_xlnx_axi_disable_callback(
-	struct device *dev,
-	int access_op,
-	u32_t pin)
+static int gpio_xlnx_axi_disable_callback (
+	struct device 	*dev, 
+	gpio_pin_t 		pin) 
 {
-	struct gpio_xlnx_axi_dev_cfg  	*dev_conf = DEV_CFG(dev);
-	struct gpio_xlnx_axi_dev_data 	*dev_data = DEV_DATA(dev);
+	struct gpio_xlnx_axi_dev_cfg	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 
 	if (dev_conf->supp_interrupt == 0) {
 		return -ENOTSUP;
@@ -296,11 +378,7 @@ static int gpio_xlnx_axi_disable_callback(
 		return -EINVAL;
 	}
 
-	if (access_op == GPIO_ACCESS_BY_PORT) {
-		dev_data->callback_mask = 0x00000000;
-	} else {
-		dev_data->callback_mask &= ~(1 << pin);
-	}
+	dev_data->callback_mask &= ~BIT(pin);
 
 	if (dev_data->callback_mask == 0x00000000)
 	{
@@ -310,19 +388,40 @@ static int gpio_xlnx_axi_disable_callback(
 	return 0;
 }
 
+static u32_t gpio_xlnx_axi_get_pending_int (struct device *dev)
+{
+	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
+	u32_t							reg_val   = 0;
+
+	if (    dev_conf->supp_interrupt == 0
+		 || dev_data->use_interrupt  == 0)
+	{
+		return 0;
+	}
+
+	reg_val = sys_read32(dev_conf->base_addr + dev_conf->ip_isr_reg_offset);
+	return (reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) ? 1 : 0;
+}
+
 static const struct gpio_driver_api gpio_xlnx_axi_driver_api = {
-	.config              = gpio_xlnx_axi_config,
-	.write               = gpio_xlnx_axi_write,
-	.read                = gpio_xlnx_axi_read,
-	.manage_callback     = gpio_xlnx_axi_manage_callback,
-	.enable_callback     = gpio_xlnx_axi_enable_callback,
-	.disable_callback    = gpio_xlnx_axi_disable_callback,
+	.pin_configure           = gpio_xlnx_axi_pin_config,
+	.port_get_raw            = gpio_xlnx_axi_port_get_raw,
+	.port_set_masked_raw     = gpio_xlnx_axi_port_set_masked_raw,
+	.port_set_bits_raw       = gpio_xlnx_axi_port_set_bits_raw,
+	.port_clear_bits_raw     = gpio_xlnx_axi_port_clear_bits_raw,
+	.port_toggle_bits        = gpio_xlnx_axi_port_toggle_bits,
+	.pin_interrupt_configure = gpio_xlnx_axi_pin_interrupt_configure,
+	.manage_callback         = gpio_xlnx_axi_manage_callback,
+	.enable_callback         = gpio_xlnx_axi_enable_callback,
+	.disable_callback        = gpio_xlnx_axi_disable_callback,
+	.get_pending_int         = gpio_xlnx_axi_get_pending_int
 };
 
-static int gpio_xlnx_axi_init(struct device *dev)
+static int gpio_xlnx_axi_init(struct device *dev) 
 {
-	struct gpio_xlnx_axi_dev_cfg  	*dev_conf = DEV_CFG(dev);
-	struct gpio_xlnx_axi_dev_data 	*dev_data = DEV_DATA(dev);
+	struct gpio_xlnx_axi_dev_cfg	*dev_conf = DEV_CFG(dev);
+	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 
 	dev_data->callback_mask     = 0;
 	dev_data->int_mask          = 0;
@@ -394,7 +493,7 @@ DEVICE_AND_API_INIT(
 
 #endif /* DT_INST_1_XLNX_AXI_GPIO */
 
-static void gpio_xlnx_axi_config_interrupt(struct device* dev)
+static void gpio_xlnx_axi_config_interrupt(struct device* dev) 
 {
 	struct gpio_xlnx_axi_dev_cfg *dev_conf = DEV_CFG(dev);
 
