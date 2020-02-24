@@ -1,5 +1,6 @@
-# Copyright (c) 2019 Lexmark International, Inc.
 #
+# Copyright (c) 2019 Lexmark International, Inc.
+# Copyright (c) 2020 Immo Birnbaum
 # SPDX-License-Identifier: Apache-2.0
 #
 
@@ -102,7 +103,7 @@ config ZYNQ_DDRPLL_DDRDCI_DIVISOR1
 	  signal is generated.
 
 ######################################################################################
-# CLOCK CONFIGURATION OF I/O PERIPHERIALS                                            #
+# CLOCK CONFIGURATION OF I/O PERIPHERALS                                             #
 ######################################################################################
 
 ###### ENET0 ######

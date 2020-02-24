@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2020 Immo Birnbaum
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -44,17 +45,17 @@
 
 /* Fixups for: Xilinx GEM Ethernet controller interrupt vector(s). */
 
-#ifdef DT_INST_0_XLNX_EMACPS
-#undef DT_INST_0_XLNX_EMACPS_IRQ_0
-#define DT_INST_0_XLNX_EMACPS_IRQ_0	((DT_INST_0_XLNX_EMACPS_IRQ_IRQ_0 + 1) << 8)
-#undef DT_INST_0_XLNX_EMACPS_IRQ_1
-#define DT_INST_0_XLNX_EMACPS_IRQ_1	((DT_INST_0_XLNX_EMACPS_IRQ_IRQ_1 + 1) << 8)
+#ifdef DT_INST_0_XLNX_GEM
+#undef DT_INST_0_XLNX_GEM_IRQ_0
+#define DT_INST_0_XLNX_GEM_IRQ_0	((DT_INST_0_XLNX_GEM_IRQ_IRQ_0 + 1) << 8)
+#undef DT_INST_0_XLNX_GEM_IRQ_1
+#define DT_INST_0_XLNX_GEM_IRQ_1	((DT_INST_0_XLNX_GEM_IRQ_IRQ_1 + 1) << 8)
 #endif
 
-#ifdef DT_INST_1_XLNX_EMACPS
-#undef DT_INST_1_XLNX_EMACPS_IRQ_0
-#define DT_INST_1_XLNX_EMACPS_IRQ_0	((DT_INST_1_XLNX_EMACPS_IRQ_IRQ_0 + 1) << 8)
-#undef DT_INST_1_XLNX_EMACPS_IRQ_1
-#define DT_INST_1_XLNX_EMACPS_IRQ_1	((DT_INST_1_XLNX_EMACPS_IRQ_IRQ_1 + 1) << 8)
+#ifdef DT_INST_1_XLNX_GEM
+#undef DT_INST_1_XLNX_GEM_IRQ_0
+#define DT_INST_1_XLNX_GEM_IRQ_0	((DT_INST_1_XLNX_GEM_IRQ_IRQ_0 + 1) << 8)
+#undef DT_INST_1_XLNX_GEM_IRQ_1
+#define DT_INST_1_XLNX_GEM_IRQ_1	((DT_INST_1_XLNX_GEM_IRQ_IRQ_1 + 1) << 8)
 #endif
 
