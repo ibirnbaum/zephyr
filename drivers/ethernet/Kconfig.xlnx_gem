@@ -1,54 +1,57 @@
-# Xilinx GEM EMACPS Ethernet driver configuration options
+#
+# Xilinx Processor System Gigabit Ethernet controller (GEM) driver configuration options
+# Copyright (c) 2020, Immo Birnbaum
 # SPDX-License-Identifier: Apache-2.0
+#
 
-menuconfig ETH_XLNX_EMACPS
-	bool "Xilinx GEM EMACPS Ethernet driver"
+menuconfig ETH_XLNX_GEM
+	bool "Xilinx GEM Ethernet driver"
 	depends on SOC_XILINX_ZYNQMP || SOC_XILINX_ZYNQ7000
 	help
 	  Enable Xilinx GEM Ethernet driver.
 
 # ---------- GEM0 ----------
 
-config ETH_XLNX_EMACPS_PORT_0
+config ETH_XLNX_GEM_PORT_0
 	bool "Enable GEM0"
-	depends on ETH_XLNX_EMACPS
+	depends on ETH_XLNX_GEM
 	help
 	  This tells the driver to configure the GEM0 at boot, depending on
-	  the additional configure options below.
+	  the additional configuration options below.
 
-config ETH_XLNX_EMACPS_PORT_0_AUX_THREAD_PRIO
+config ETH_XLNX_GEM_PORT_0_AUX_THREAD_PRIO
 	int "Auxiliary thread priority"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 1
 	help
 	  Sets the priority of the auxiliary thread which handles the PHY's
-	  status and optionally the deferred handling of RX/TX done indications
+	  status and the deferred handling of RX/TX done indications
 	  from the ISR.
 
-config ETH_XLNX_EMACPS_PORT_0_AUX_THREAD_STACK_SIZE
+config ETH_XLNX_GEM_PORT_0_AUX_THREAD_STACK_SIZE
 	int "Auxiliary thread stack size"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 1024
 	help
 	  Sets the stack size of the auxiliary thread which handles the PHY's
-	  status and optionally the deferred handling of RX/TX done indications
+	  status and the deferred handling of RX/TX done indications
 	  from the ISR.
 	
 menu "GEM0 memory configuration"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 
-config ETH_XLNX_EMACPS_PORT_0_RXBD_COUNT
+config ETH_XLNX_GEM_PORT_0_RXBD_COUNT
 	int "Number of DMA RX data buffers and descriptors"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 32
 	range 1 128
 	help
 	  Sets the number of RX packet data buffers and corresponding buffer
 	  descriptors in memory which will be accessed by the GEM via DMA.
 
-config ETH_XLNX_EMACPS_PORT_0_RX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_0_RX_BUFFER_SIZE
 	int "Receive buffer size (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 512
 	range 128 1540
 	help
@@ -56,18 +59,18 @@ config ETH_XLNX_EMACPS_PORT_0_RX_BUFFER_SIZE
 	  by the GEM via DMA. The value specified here will be adjusted to match the
 	  buffer alignment requirements of the controller.
 
-config ETH_XLNX_EMACPS_PORT_0_TXBD_COUNT
+config ETH_XLNX_GEM_PORT_0_TXBD_COUNT
 	int "Number of DMA TX data buffers and descriptors"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 32
 	range 1 128
 	help
 	  Sets the number of TX packet data buffers and corresponding buffer
 	  descriptors in memory which will be accessed by the GEM via DMA.
 
-config ETH_XLNX_EMACPS_PORT_0_TX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_0_TX_BUFFER_SIZE
 	int "Transmit buffer size (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default 512
 	range 128 1540
 	help
@@ -77,48 +80,48 @@ config ETH_XLNX_EMACPS_PORT_0_TX_BUFFER_SIZE
 
 choice
 	prompt "Hardware RX buffer memory size"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Configures which address space within the hardware RX buffer shall be
 	  used, effectively determining its size.
 
-config ETH_XLNX_EMACPS_PORT_0_HWRX_BUFFER_SIZE_FULL
+config ETH_XLNX_GEM_PORT_0_HWRX_BUFFER_SIZE_FULL
 	bool "Use the full RX buffer size (8 kB)"
 
-config ETH_XLNX_EMACPS_PORT_0_HWRX_BUFFER_SIZE_4KB
+config ETH_XLNX_GEM_PORT_0_HWRX_BUFFER_SIZE_4KB
 	bool "Disable highest address bit (4 kB)"
 
-config ETH_XLNX_EMACPS_PORT_0_HWRX_BUFFER_SIZE_2KB
+config ETH_XLNX_GEM_PORT_0_HWRX_BUFFER_SIZE_2KB
 	bool "Disable top two address bits (2 kB)"
 
-config ETH_XLNX_EMACPS_PORT_0_HWRX_BUFFER_SIZE_1KB
+config ETH_XLNX_GEM_PORT_0_HWRX_BUFFER_SIZE_1KB
 	bool "Disable top three address bits (1 kB)"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_0_HWRX_BUFFER_OFFSET
+config ETH_XLNX_GEM_PORT_0_HWRX_BUFFER_OFFSET
 	int "Data offset in the hardware RX packet buffer (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	range 0 3
 	default 0
 
 choice
 	prompt "Hardware TX packet buffer memory size"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Configures if the full size of half size hardware TX buffer shall be used.
 
-config ETH_XLNX_EMACPS_PORT_0_HWTX_BUFFER_SIZE_FULL
+config ETH_XLNX_GEM_PORT_0_HWTX_BUFFER_SIZE_FULL
 	bool "Use the full TX buffer size (4 kB)"
 
-config ETH_XLNX_EMACPS_PORT_0_HWTX_BUFFER_SIZE_HALF
+config ETH_XLNX_GEM_PORT_0_HWTX_BUFFER_SIZE_HALF
 	bool "Use half of the available TX buffer size (2 kB)"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_0_AHB_RX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_0_AHB_RX_BUFFER_SIZE
 	int "DMA RX buffer size in AHB system memory, <n> times 64 Bytes"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	range 1 255
 	default 24
 	help
@@ -128,25 +131,25 @@ config ETH_XLNX_EMACPS_PORT_0_AHB_RX_BUFFER_SIZE
 
 choice
 	prompt "RX/TX memory location configuration"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Configures the memory area to be used by the controller.
 
-config ETH_XLNX_EMACPS_PORT_0_DMA_FIXED
+config ETH_XLNX_GEM_PORT_0_DMA_FIXED
         bool "Use a fixed memory address"
 	help
 	  The RX/TX data memory will be located at a fixed address.
 
-config ETH_XLNX_EMACPS_PORT_0_DMA_DATASECTION
+config ETH_XLNX_GEM_PORT_0_DMA_DATASECTION
 	bool "Use the address of local memory within the Zephyr binary's data section"
 	help
 	  The RX/TX data memory will be located in the RAM area used by data integrated into the Zephyr binary.
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_0_DMA_BASE_ADDRESS
-        depends on ETH_XLNX_EMACPS_PORT_0
-	depends on ETH_XLNX_EMACPS_PORT_0_DMA_FIXED
+config ETH_XLNX_GEM_PORT_0_DMA_BASE_ADDRESS
+        depends on ETH_XLNX_GEM_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0_DMA_FIXED
 	hex "Base address of RX/TX data memory"
 	range 0x00000000 0xFFFFFFFF
 	default 0x00001000
@@ -155,21 +158,21 @@ config ETH_XLNX_EMACPS_PORT_0_DMA_BASE_ADDRESS
 
 choice
 	prompt "AMBA AHB Data bus width"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Sets the AMBA AHB bus width.
 
-config ETH_XLNX_EMACPS_PORT_0_AMBAAHB_32BIT
+config ETH_XLNX_GEM_PORT_0_AMBAAHB_32BIT
         bool "32 bits"
 	help
 	  AMBA AHB bus width is 32 bits.
 
-config ETH_XLNX_EMACPS_PORT_0_AMBAAHB_64BIT
+config ETH_XLNX_GEM_PORT_0_AMBAAHB_64BIT
         bool "64 bits"
 	help
 	  AMBA AHB bus width is 64 bits.
 
-config ETH_XLNX_EMACPS_PORT_0_AMBAAHB_128BIT
+config ETH_XLNX_GEM_PORT_0_AMBAAHB_128BIT
         bool "128 bits"
 	help
 	  AMBA AHB bus width is 128 bits.
@@ -178,42 +181,42 @@ endchoice
 
 choice
 	prompt "AHB fixed burst length for DMA data operations"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Sets the AHB fixed burst length for DMA data operations.
 
-config ETH_XLNX_EMACPS_PORT_0_AHBBURST_SINGLE
+config ETH_XLNX_GEM_PORT_0_AHBBURST_SINGLE
         bool "Always use SINGLE AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_0_AHBBURST_INCR4
+config ETH_XLNX_GEM_PORT_0_AHBBURST_INCR4
         bool "Attempt to use INCR4 AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_0_AHBBURST_INCR8
+config ETH_XLNX_GEM_PORT_0_AHBBURST_INCR8
         bool "Attempt to use INCR8 AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_0_AHBBURST_INCR16
+config ETH_XLNX_GEM_PORT_0_AHBBURST_INCR16
         bool "Attempt to use INCR16 AHB bursts"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_0_DISC_RX_AHB_UNAVAIL
+config ETH_XLNX_GEM_PORT_0_DISC_RX_AHB_UNAVAIL
 	bool "Discard RX packets when no AHB resource is available"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default n
 	help
 	  Discard RX packets when no AHB resource is available
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_AHB_PACKET_ENDIAN_SWAP
+config ETH_XLNX_GEM_PORT_0_ENABLE_AHB_PACKET_ENDIAN_SWAP
 	bool "Enable AHB packet data endian swap"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default n
 	help
 	  Enable AHB packet data endian swap. If this flag is not set, data will be
 	  little endian.
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_AHB_MD_ENDIAN_SWAP
+config ETH_XLNX_GEM_PORT_0_ENABLE_AHB_MD_ENDIAN_SWAP
 	bool "Enable AHB management descriptor endian swap"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	default n
 	help
 	  Enable AHB management descriptor endian swap. If this flag is not set, data 
@@ -223,16 +226,16 @@ endmenu
 
 choice
 	prompt "MAC address configuration"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Determines the source of the MAC address to be used by the controller.
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_DEVTREE
+config ETH_XLNX_GEM_PORT_0_MAC_DEVTREE
         bool "Use MAC address specified in the SOC's device tree"
 	help
 	  The controller will use the MAC address provided in the SOC's device tree.
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_EXPLICIT
+config ETH_XLNX_GEM_PORT_0_MAC_EXPLICIT
 	bool "Set MAC address explicitly"
 	help
 	  The controller will use the MAC address provided within this target configuration file.
@@ -240,45 +243,45 @@ config ETH_XLNX_EMACPS_PORT_0_MAC_EXPLICIT
 endchoice
 
 menu "Set MAC address"
-	depends on ETH_XLNX_EMACPS_PORT_0
-	depends on ETH_XLNX_EMACPS_PORT_0_MAC_EXPLICIT
+	depends on ETH_XLNX_GEM_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0_MAC_EXPLICIT
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_5
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_5
 	hex "MAC address byte [5] (MSB)"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [5] (high byte).
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_4
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_4
 	hex "MAC address byte [4]"
 	range 0x00 0xFF
 	default 0x80
 	help
 	  MAC address byte [4].
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_3
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_3
 	hex "MAC address byte [3]"
 	range 0x00 0xFF
 	default 0x10
 	help
 	  MAC address byte [3].
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_2
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_2
 	hex "MAC address byte [2]"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [2].
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_1
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_1
 	hex "MAC address byte [1]"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [1].
 
-config ETH_XLNX_EMACPS_PORT_0_MAC_BYTE_0
+config ETH_XLNX_GEM_PORT_0_MAC_BYTE_0
 	hex "MAC address byte [0] (LSB)"
 	range 0x00 0xFF
 	default 0x01
@@ -289,41 +292,41 @@ endmenu
 
 choice
 	prompt "Nominal / maximum link speed"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 	help
 	  Sets the nominal link speed value to be used upon both PHY and GEM controller configuration.
 	  If the option 'Advertise lower link speeds during PHY auto-negotiation' is selected, this
 	  value determines the maximum link speed, while the negotiation of lower link speeds at run-time
 	  is possible.
 
-config ETH_XLNX_EMACPS_PORT_0_LINK_10MBIT
+config ETH_XLNX_GEM_PORT_0_LINK_10MBIT
         bool "10 MBit/s"
 	help
 	  Nominal link speed is 10 MBit/s.
 
-config ETH_XLNX_EMACPS_PORT_0_LINK_100MBIT
+config ETH_XLNX_GEM_PORT_0_LINK_100MBIT
         bool "100 MBit/s"
 	help
 	  Nominal link speed is 100 MBit/s.
 
-config ETH_XLNX_EMACPS_PORT_0_LINK_1GBIT
+config ETH_XLNX_GEM_PORT_0_LINK_1GBIT
         bool "1 GBit/s"
 	help
 	  Nominal link speed is 1 GBit/s.
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_0_INIT_PHY
-	depends on ETH_XLNX_EMACPS_PORT_0
+config ETH_XLNX_GEM_PORT_0_INIT_PHY
+	depends on ETH_XLNX_GEM_PORT_0
 	bool "Initialize PHY upon GEM initialzation"
 	default y
 	help
 	  Determines if the PHY connected to the GEM shall be initialized by the driver.
 	  ATTENTION: At this time, only the Marvell Alaska PHY as found on the Zedboard is supported!
 
-config ETH_XLNX_EMACPS_PORT_0_PHY_ADVERTISE_LOWER
-	depends on ETH_XLNX_EMACPS_PORT_0
-	depends on ETH_XLNX_EMACPS_PORT_0_INIT_PHY
+config ETH_XLNX_GEM_PORT_0_PHY_ADVERTISE_LOWER
+	depends on ETH_XLNX_GEM_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0_INIT_PHY
 	bool "Advertise lower link speeds during PHY auto-negotiation"
 	default n
 	help
@@ -333,89 +336,89 @@ config ETH_XLNX_EMACPS_PORT_0_PHY_ADVERTISE_LOWER
 	  will be advertised.
 
 menu "Select controller feature flags"
-	depends on ETH_XLNX_EMACPS_PORT_0
+	depends on ETH_XLNX_GEM_PORT_0
 
-config ETH_XLNX_EMACPS_PORT_0_IGNORE_IGP_RXER
+config ETH_XLNX_GEM_PORT_0_IGNORE_IGP_RXER
 	bool "Ignore IGP rx_er"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_DISABLE_REJECT_NSP
+config ETH_XLNX_GEM_PORT_0_DISABLE_REJECT_NSP
 	bool "Disable rejection of non-standard preamble"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_IGP_STRETCH
+config ETH_XLNX_GEM_PORT_0_ENABLE_IGP_STRETCH
 	bool "Enable IGP stretch"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_SGMII_MODE
+config ETH_XLNX_GEM_PORT_0_ENABLE_SGMII_MODE
 	bool "Enable SGMII mode"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_DISABLE_REJECT_NSP
+config ETH_XLNX_GEM_PORT_0_DISABLE_REJECT_NSP
 	bool "Disable rejection of frames with FCS/CRC errors"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_RX_HALFDUP_WHILE_TX
+config ETH_XLNX_GEM_PORT_0_ENABLE_RX_HALFDUP_WHILE_TX
 	bool "Enable half-duplex RX while transmitting"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_RX_CHKSUM_OFFLOAD
+config ETH_XLNX_GEM_PORT_0_ENABLE_RX_CHKSUM_OFFLOAD
 	bool "Enable IP/TCP/UDP RX checksum offload to hardware"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_TX_CHKSUM_OFFLOAD
+config ETH_XLNX_GEM_PORT_0_ENABLE_TX_CHKSUM_OFFLOAD
 	bool "Enable IP/TCP/UDP TX checksum offload to hardware"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_DISABLE_PAUSE_COPY
+config ETH_XLNX_GEM_PORT_0_DISABLE_PAUSE_COPY
 	bool "Disable copying of pause frames to memory"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_DISCARD_RX_FCS
+config ETH_XLNX_GEM_PORT_0_DISCARD_RX_FCS
 	bool "Discard FCS from received frames"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_DISCARD_RX_LENGTH_ERRORS
+config ETH_XLNX_GEM_PORT_0_DISCARD_RX_LENGTH_ERRORS
 	bool "Discard RX length errors"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_PAUSE
+config ETH_XLNX_GEM_PORT_0_ENABLE_PAUSE
 	bool "Enable pause frame consideration"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_TBI
+config ETH_XLNX_GEM_PORT_0_ENABLE_TBI
 	bool "Enable TBI instead of GMII/MII"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_EXT_ADDR_MATCH
+config ETH_XLNX_GEM_PORT_0_ENABLE_EXT_ADDR_MATCH
 	bool "Enable external address match"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_1536_FRAMES
+config ETH_XLNX_GEM_PORT_0_ENABLE_1536_FRAMES
 	bool "Enable reception of 1536 bytes Ethernet frames"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_UCAST_HASH
+config ETH_XLNX_GEM_PORT_0_ENABLE_UCAST_HASH
 	bool "Enable unicast hash frame reception"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_MCAST_HASH
+config ETH_XLNX_GEM_PORT_0_ENABLE_MCAST_HASH
 	bool "Enable multicast hash frame reception"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_DISABLE_BCAST
+config ETH_XLNX_GEM_PORT_0_DISABLE_BCAST
 	bool "Disable broadcast frame reception"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_COPY_ALL_FRAMES
+config ETH_XLNX_GEM_PORT_0_COPY_ALL_FRAMES
 	bool "Copy all valid received frames to memory (promiscuous mode)"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_DISCARD_NON_VLAN
+config ETH_XLNX_GEM_PORT_0_DISCARD_NON_VLAN
 	bool "Discard all non-VLAN frames"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_0_ENABLE_FDX
+config ETH_XLNX_GEM_PORT_0_ENABLE_FDX
 	bool "Enable full duplex"
 	default y
 
@@ -423,46 +426,46 @@ endmenu
 
 # ---------- GEM1 ----------
 
-config ETH_XLNX_EMACPS_PORT_1
+config ETH_XLNX_GEM_PORT_1
 	bool "Enable GEM1"
-	depends on ETH_XLNX_EMACPS
+	depends on ETH_XLNX_GEM
 	help
 	  This tells the driver to configure the GEM1 at boot, depending on
-	  the additional configure options below.
+	  the additional configuration options below.
 
-config ETH_XLNX_EMACPS_PORT_1_AUX_THREAD_PRIO
+config ETH_XLNX_GEM_PORT_1_AUX_THREAD_PRIO
 	int "Auxiliary thread priority"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 1
 	help
 	  Sets the priority of the auxiliary thread which handles the PHY's
-	  status and optionally the deferred handling of RX/TX done indications
+	  status and the deferred handling of RX/TX done indications
 	  from the ISR.
 
-config ETH_XLNX_EMACPS_PORT_1_AUX_THREAD_STACK_SIZE
+config ETH_XLNX_GEM_PORT_1_AUX_THREAD_STACK_SIZE
 	int "Auxiliary thread stack size"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 1024
 	help
 	  Sets the stack size of the auxiliary thread which handles the PHY's
-	  status and optionally the deferred handling of RX/TX done indications
+	  status and the deferred handling of RX/TX done indications
 	  from the ISR.
 	
 menu "GEM1 memory configuration"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 
-config ETH_XLNX_EMACPS_PORT_1_RXBD_COUNT
+config ETH_XLNX_GEM_PORT_1_RXBD_COUNT
 	int "Number of DMA RX data buffers and descriptors"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 32
 	range 1 128
 	help
 	  Sets the number of RX packet data buffers and corresponding buffer
 	  descriptors in memory which will be accessed by the GEM via DMA.
 
-config ETH_XLNX_EMACPS_PORT_1_RX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_1_RX_BUFFER_SIZE
 	int "Receive buffer size (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 512
 	range 128 1540
 	help
@@ -470,18 +473,18 @@ config ETH_XLNX_EMACPS_PORT_1_RX_BUFFER_SIZE
 	  by the GEM via DMA. The value specified here will be adjusted to match the
 	  buffer alignment requirements of the controller.
 
-config ETH_XLNX_EMACPS_PORT_1_TXBD_COUNT
+config ETH_XLNX_GEM_PORT_1_TXBD_COUNT
 	int "Number of DMA TX data buffers and descriptors"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 32
 	range 1 128
 	help
 	  Sets the number of TX packet data buffers and corresponding buffer
 	  descriptors in memory which will be accessed by the GEM via DMA.
 
-config ETH_XLNX_EMACPS_PORT_1_TX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_1_TX_BUFFER_SIZE
 	int "Transmit buffer size (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default 512
 	range 128 1540
 	help
@@ -491,48 +494,48 @@ config ETH_XLNX_EMACPS_PORT_1_TX_BUFFER_SIZE
 
 choice
 	prompt "Hardware RX buffer memory size"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Configures which address space within the hardware RX buffer shall be
 	  used, effectively determining its size.
 
-config ETH_XLNX_EMACPS_PORT_1_HWRX_BUFFER_SIZE_FULL
+config ETH_XLNX_GEM_PORT_1_HWRX_BUFFER_SIZE_FULL
 	bool "Use the full RX buffer size (8 kB)"
 
-config ETH_XLNX_EMACPS_PORT_1_HWRX_BUFFER_SIZE_4KB
+config ETH_XLNX_GEM_PORT_1_HWRX_BUFFER_SIZE_4KB
 	bool "Disable highest address bit (4 kB)"
 
-config ETH_XLNX_EMACPS_PORT_1_HWRX_BUFFER_SIZE_2KB
+config ETH_XLNX_GEM_PORT_1_HWRX_BUFFER_SIZE_2KB
 	bool "Disable top two address bits (2 kB)"
 
-config ETH_XLNX_EMACPS_PORT_1_HWRX_BUFFER_SIZE_1KB
+config ETH_XLNX_GEM_PORT_1_HWRX_BUFFER_SIZE_1KB
 	bool "Disable top three address bits (1 kB)"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_1_HWRX_BUFFER_OFFSET
+config ETH_XLNX_GEM_PORT_1_HWRX_BUFFER_OFFSET
 	int "Data offset in the hardware RX packet buffer (in bytes)"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	range 0 3
 	default 0
 
 choice
 	prompt "Hardware TX packet buffer memory size"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Configures if the full size of half size hardware TX buffer shall be used.
 
-config ETH_XLNX_EMACPS_PORT_1_HWTX_BUFFER_SIZE_FULL
+config ETH_XLNX_GEM_PORT_1_HWTX_BUFFER_SIZE_FULL
 	bool "Use the full TX buffer size (4 kB)"
 
-config ETH_XLNX_EMACPS_PORT_1_HWTX_BUFFER_SIZE_HALF
+config ETH_XLNX_GEM_PORT_1_HWTX_BUFFER_SIZE_HALF
 	bool "Use half of the available TX buffer size (2 kB)"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_1_AHB_RX_BUFFER_SIZE
+config ETH_XLNX_GEM_PORT_1_AHB_RX_BUFFER_SIZE
 	int "DMA RX buffer size in AHB system memory, <n> times 64 Bytes"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	range 1 255
 	default 24
 	help
@@ -542,25 +545,25 @@ config ETH_XLNX_EMACPS_PORT_1_AHB_RX_BUFFER_SIZE
 
 choice
 	prompt "RX/TX memory location configuration"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Configures the memory area to be used by the controller.
 
-config ETH_XLNX_EMACPS_PORT_1_DMA_FIXED
+config ETH_XLNX_GEM_PORT_1_DMA_FIXED
         bool "Use a fixed memory address"
 	help
 	  The RX/TX data memory will be located at a fixed address.
 
-config ETH_XLNX_EMACPS_PORT_1_DMA_DATASECTION
+config ETH_XLNX_GEM_PORT_1_DMA_DATASECTION
 	bool "Use the address of local memory within the Zephyr binary's data section"
 	help
 	  The RX/TX data memory will be located in the RAM area used by data integrated into the Zephyr binary.
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_1_DMA_BASE_ADDRESS
-        depends on ETH_XLNX_EMACPS_PORT_1
-	depends on ETH_XLNX_EMACPS_PORT_1_DMA_FIXED
+config ETH_XLNX_GEM_PORT_1_DMA_BASE_ADDRESS
+        depends on ETH_XLNX_GEM_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1_DMA_FIXED
 	hex "Base address of RX/TX data memory"
 	range 0x00000000 0xFFFFFFFF
 	default 0x00021000
@@ -569,21 +572,21 @@ config ETH_XLNX_EMACPS_PORT_1_DMA_BASE_ADDRESS
 
 choice
 	prompt "AMBA AHB Data bus width"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Sets the AMBA AHB bus width.
 
-config ETH_XLNX_EMACPS_PORT_1_AMBAAHB_32BIT
+config ETH_XLNX_GEM_PORT_1_AMBAAHB_32BIT
         bool "32 bits"
 	help
 	  AMBA AHB bus width is 32 bits.
 
-config ETH_XLNX_EMACPS_PORT_1_AMBAAHB_64BIT
+config ETH_XLNX_GEM_PORT_1_AMBAAHB_64BIT
         bool "64 bits"
 	help
 	  AMBA AHB bus width is 64 bits.
 
-config ETH_XLNX_EMACPS_PORT_1_AMBAAHB_128BIT
+config ETH_XLNX_GEM_PORT_1_AMBAAHB_128BIT
         bool "128 bits"
 	help
 	  AMBA AHB bus width is 128 bits.
@@ -592,42 +595,42 @@ endchoice
 
 choice
 	prompt "AHB fixed burst length for DMA data operations"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Sets the AHB fixed burst length for DMA data operations.
 
-config ETH_XLNX_EMACPS_PORT_1_AHBBURST_SINGLE
+config ETH_XLNX_GEM_PORT_1_AHBBURST_SINGLE
         bool "Always use SINGLE AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_1_AHBBURST_INCR4
+config ETH_XLNX_GEM_PORT_1_AHBBURST_INCR4
         bool "Attempt to use INCR4 AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_1_AHBBURST_INCR8
+config ETH_XLNX_GEM_PORT_1_AHBBURST_INCR8
         bool "Attempt to use INCR8 AHB bursts"
 
-config ETH_XLNX_EMACPS_PORT_1_AHBBURST_INCR16
+config ETH_XLNX_GEM_PORT_1_AHBBURST_INCR16
         bool "Attempt to use INCR16 AHB bursts"
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_1_DISC_RX_AHB_UNAVAIL
+config ETH_XLNX_GEM_PORT_1_DISC_RX_AHB_UNAVAIL
 	bool "Discard RX packets when no AHB resource is available"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default n
 	help
 	  Discard RX packets when no AHB resource is available
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_AHB_PACKET_ENDIAN_SWAP
+config ETH_XLNX_GEM_PORT_1_ENABLE_AHB_PACKET_ENDIAN_SWAP
 	bool "Enable AHB packet data endian swap"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default n
 	help
 	  Enable AHB packet data endian swap. If this flag is not set, data will be
 	  little endian.
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_AHB_MD_ENDIAN_SWAP
+config ETH_XLNX_GEM_PORT_1_ENABLE_AHB_MD_ENDIAN_SWAP
 	bool "Enable AHB management descriptor endian swap"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	default n
 	help
 	  Enable AHB management descriptor endian swap. If this flag is not set, data 
@@ -637,16 +640,16 @@ endmenu
 
 choice
 	prompt "MAC address configuration"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Determines the source of the MAC address to be used by the controller.
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_DEVTREE
+config ETH_XLNX_GEM_PORT_1_MAC_DEVTREE
         bool "Use MAC address specified in the SOC's device tree"
 	help
 	  The controller will use the MAC address provided in the SOC's device tree.
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_EXPLICIT
+config ETH_XLNX_GEM_PORT_1_MAC_EXPLICIT
 	bool "Set MAC address explicitly"
 	help
 	  The controller will use the MAC address provided within this target configuration file.
@@ -654,45 +657,45 @@ config ETH_XLNX_EMACPS_PORT_1_MAC_EXPLICIT
 endchoice
 
 menu "Set MAC address"
-	depends on ETH_XLNX_EMACPS_PORT_1
-	depends on ETH_XLNX_EMACPS_PORT_1_MAC_EXPLICIT
+	depends on ETH_XLNX_GEM_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1_MAC_EXPLICIT
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_5
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_5
 	hex "MAC address byte [5] (MSB)"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [5] (high byte).
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_4
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_4
 	hex "MAC address byte [4]"
 	range 0x00 0xFF
 	default 0x80
 	help
 	  MAC address byte [4].
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_3
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_3
 	hex "MAC address byte [3]"
 	range 0x00 0xFF
 	default 0x10
 	help
 	  MAC address byte [3].
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_2
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_2
 	hex "MAC address byte [2]"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [2].
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_1
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_1
 	hex "MAC address byte [1]"
 	range 0x00 0xFF
 	default 0x00
 	help
 	  MAC address byte [1].
 
-config ETH_XLNX_EMACPS_PORT_1_MAC_BYTE_0
+config ETH_XLNX_GEM_PORT_1_MAC_BYTE_0
 	hex "MAC address byte [0] (LSB)"
 	range 0x00 0xFF
 	default 0x02
@@ -703,41 +706,41 @@ endmenu
 
 choice
 	prompt "Nominal / maximum link speed"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 	help
 	  Sets the nominal link speed value to be used upon both PHY and GEM controller configuration.
 	  If the option 'Advertise lower link speeds during PHY auto-negotiation' is selected, this
 	  value determines the maximum link speed, while the negotiation of lower link speeds at run-time
 	  is possible.
 
-config ETH_XLNX_EMACPS_PORT_1_LINK_10MBIT
+config ETH_XLNX_GEM_PORT_1_LINK_10MBIT
         bool "10 MBit/s"
 	help
 	  Nominal link speed is 10 MBit/s.
 
-config ETH_XLNX_EMACPS_PORT_1_LINK_100MBIT
+config ETH_XLNX_GEM_PORT_1_LINK_100MBIT
         bool "100 MBit/s"
 	help
 	  Nominal link speed is 100 MBit/s.
 
-config ETH_XLNX_EMACPS_PORT_1_LINK_1GBIT
+config ETH_XLNX_GEM_PORT_1_LINK_1GBIT
         bool "1 GBit/s"
 	help
 	  Nominal link speed is 1 GBit/s.
 
 endchoice
 
-config ETH_XLNX_EMACPS_PORT_1_INIT_PHY
-	depends on ETH_XLNX_EMACPS_PORT_1
+config ETH_XLNX_GEM_PORT_1_INIT_PHY
+	depends on ETH_XLNX_GEM_PORT_1
 	bool "Initialize PHY upon GEM initialzation"
 	default y
 	help
 	  Determines if the PHY connected to the GEM shall be initialized by the driver.
 	  ATTENTION: At this time, only the Marvell Alaska PHY as found on the Zedboard is supported!
 
-config ETH_XLNX_EMACPS_PORT_1_PHY_ADVERTISE_LOWER
-	depends on ETH_XLNX_EMACPS_PORT_1
-	depends on ETH_XLNX_EMACPS_PORT_1_INIT_PHY
+config ETH_XLNX_GEM_PORT_1_PHY_ADVERTISE_LOWER
+	depends on ETH_XLNX_GEM_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1_INIT_PHY
 	bool "Advertise lower link speeds during PHY auto-negotiation"
 	default n
 	help
@@ -747,89 +750,89 @@ config ETH_XLNX_EMACPS_PORT_1_PHY_ADVERTISE_LOWER
 	  will be advertised.
 
 menu "Select controller feature flags"
-	depends on ETH_XLNX_EMACPS_PORT_1
+	depends on ETH_XLNX_GEM_PORT_1
 
-config ETH_XLNX_EMACPS_PORT_1_IGNORE_IGP_RXER
+config ETH_XLNX_GEM_PORT_1_IGNORE_IGP_RXER
 	bool "Ignore IGP rx_er"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_DISABLE_REJECT_NSP
+config ETH_XLNX_GEM_PORT_1_DISABLE_REJECT_NSP
 	bool "Disable rejection of non-standard preamble"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_IGP_STRETCH
+config ETH_XLNX_GEM_PORT_1_ENABLE_IGP_STRETCH
 	bool "Enable IGP stretch"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_SGMII_MODE
+config ETH_XLNX_GEM_PORT_1_ENABLE_SGMII_MODE
 	bool "Enable SGMII mode"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_DISABLE_REJECT_NSP
+config ETH_XLNX_GEM_PORT_1_DISABLE_REJECT_NSP
 	bool "Disable rejection of frames with FCS/CRC errors"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_RX_HALFDUP_WHILE_TX
+config ETH_XLNX_GEM_PORT_1_ENABLE_RX_HALFDUP_WHILE_TX
 	bool "Enable half-duplex RX while transmitting"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_RX_CHKSUM_OFFLOAD
+config ETH_XLNX_GEM_PORT_1_ENABLE_RX_CHKSUM_OFFLOAD
 	bool "Enable IP/TCP/UDP RX checksum offload to hardware"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_TX_CHKSUM_OFFLOAD
+config ETH_XLNX_GEM_PORT_1_ENABLE_TX_CHKSUM_OFFLOAD
 	bool "Enable IP/TCP/UDP TX checksum offload to hardware"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_DISABLE_PAUSE_COPY
+config ETH_XLNX_GEM_PORT_1_DISABLE_PAUSE_COPY
 	bool "Disable copying of pause frames to memory"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_DISCARD_RX_FCS
+config ETH_XLNX_GEM_PORT_1_DISCARD_RX_FCS
 	bool "Discard FCS from received frames"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_DISCARD_RX_LENGTH_ERRORS
+config ETH_XLNX_GEM_PORT_1_DISCARD_RX_LENGTH_ERRORS
 	bool "Discard RX length errors"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_PAUSE
+config ETH_XLNX_GEM_PORT_1_ENABLE_PAUSE
 	bool "Enable pause frame consideration"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_TBI
+config ETH_XLNX_GEM_PORT_1_ENABLE_TBI
 	bool "Enable TBI instead of GMII/MII"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_EXT_ADDR_MATCH
+config ETH_XLNX_GEM_PORT_1_ENABLE_EXT_ADDR_MATCH
 	bool "Enable external address match"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_1536_FRAMES
+config ETH_XLNX_GEM_PORT_1_ENABLE_1536_FRAMES
 	bool "Enable reception of 1536 bytes Ethernet frames"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_UCAST_HASH
+config ETH_XLNX_GEM_PORT_1_ENABLE_UCAST_HASH
 	bool "Enable unicast hash frame reception"
 	default y
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_MCAST_HASH
+config ETH_XLNX_GEM_PORT_1_ENABLE_MCAST_HASH
 	bool "Enable multicast hash frame reception"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_DISABLE_BCAST
+config ETH_XLNX_GEM_PORT_1_DISABLE_BCAST
 	bool "Disable broadcast frame reception"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_COPY_ALL_FRAMES
+config ETH_XLNX_GEM_PORT_1_COPY_ALL_FRAMES
 	bool "Copy all valid received frames to memory (promiscuous mode)"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_DISCARD_NON_VLAN
+config ETH_XLNX_GEM_PORT_1_DISCARD_NON_VLAN
 	bool "Discard all non-VLAN frames"
 	default n
 
-config ETH_XLNX_EMACPS_PORT_1_ENABLE_FDX
+config ETH_XLNX_GEM_PORT_1_ENABLE_FDX
 	bool "Enable full duplex"
 	default y
 
