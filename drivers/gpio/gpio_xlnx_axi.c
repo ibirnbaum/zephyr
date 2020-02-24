@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2020 Immo Birnbaum
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -8,7 +10,7 @@
 
 /*
  * IP core documentation used:
- * Xilinx AXI GPIO v2.0 LogiCORE IP Product Guide PG144 dated October 5, 2016
+ * Xilinx AXI GPIO v2.0 LogiCORE IP Product Guide PG144 dated October 5, 2016.
  * NOTICE: this driver only supports the AXI GPIO IP core in single channel
  * operation mode. While pin access in index-based and could therefore handle
  * the dual-channel mode range [0..63], the bit masks of the callback API
@@ -38,10 +40,12 @@ LOG_MODULE_REGISTER(gpio_xlnx_axi);
 #define GPIO_XLNX_AXI_CH1_INT_DISABLE			(0 <<  0)
 #define GPIO_XLNX_AXI_CH1_INT_PENDING			(1 <<  0)
 
-#define LOG_LEVEL CONFIG_GPIO_LOG_LEVEL
+#define LOG_LEVEL 								CONFIG_GPIO_LOG_LEVEL
 
 typedef void (*gpio_xlnx_axi_config_irq_t)(struct device*);
 static void gpio_xlnx_axi_config_interrupt(struct device* dev);
+
+/* Static driver instance configuration data */
 
 struct gpio_xlnx_axi_dev_cfg {
 	u8_t						supp_interrupt;
@@ -55,6 +59,8 @@ struct gpio_xlnx_axi_dev_cfg {
 
 	gpio_xlnx_axi_config_irq_t	config_func;
 };
+
+/* Driver instance run-time data */
 
 struct gpio_xlnx_axi_dev_data {
 	sys_slist_t 				callbacks;
@@ -75,6 +81,8 @@ struct gpio_xlnx_axi_dev_data {
 #define DEV_DATA(dev) \
 	((struct gpio_xlnx_axi_dev_data*)(dev)->driver_data)
 
+/* ISR */
+
 static void gpio_xlnx_axi_isr (void *arg)
 {
 	struct device					*dev         = (struct device*)arg;
@@ -86,19 +94,38 @@ static void gpio_xlnx_axi_isr (void *arg)
 	u32_t							pin_mask     = 0;
 
 	isr_reg_val = sys_read32(dev_conf->base_addr + dev_conf->ip_isr_reg_offset);
-	if (isr_reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) {
-		curr_in_data  = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset);
-		curr_in_data ^= dev_data->invert_mask;
-		curr_in_data &= ~dev_data->pin_dir;
 
-		last_in_data  = dev_data->last_data & ~dev_data->pin_dir;
+	if (isr_reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) {
+
+		/* 
+		 * A data change interrupt is pending for channel 1.
+		 * -> Read the current contents of the data register.
+		 *    (For all pins configured as output: RAZ)
+		 * -> Apply the invert mask to the acquired data.
+		 * -> XOR the resulting data word with the reference data word
+		 *    obtained during either the last read/set/clear/toggle call 
+		 *    or the last execution of the ISR, thus creating a bitmask 
+		 *    of all pins whose level has changed. If the bitmask is 
+		 *    non-zero, hand it over to gpio_fire_callbacks.
+		 */
+
+		curr_in_data  = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset)
+			^ dev_data->invert_mask;
+		last_in_data  = dev_data->last_data & (~dev_data->pin_dir);
 		pin_mask      = curr_in_data ^ last_in_data;
 
 		if ((pin_mask & dev_data->callback_mask) != 0) {
 			gpio_fire_callbacks(&dev_data->callbacks, dev, pin_mask);
 		}
 
+		/* Clear the interrupt pending bit */
+
 		sys_write32(GPIO_XLNX_AXI_CH1_INT_PENDING, dev_conf->base_addr + dev_conf->ip_isr_reg_offset);
+
+		/* Store the current data word contents as reference for future
+		 * level change detection. Retain the output data, replace the
+		 * input data with the current data. */
+
 		dev_data->last_data = (dev_data->last_data & dev_data->pin_dir) | curr_in_data;
 	}
 }
@@ -110,8 +137,6 @@ static int gpio_xlnx_axi_pin_config (
 {
 	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
-
-	/* Pre-condition checks */
 
 	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
 		/* Pin index exceeds the valid range. */
@@ -149,13 +174,16 @@ static int gpio_xlnx_axi_pin_config (
 	}
 
 	/* Update the pin direction register */
+
 	sys_write32(~(dev_data->pin_dir), dev_conf->base_addr + dev_conf->tri_reg_offset);
 
 	/* Read the current data register contents as reference for pin level
-	 * change detection.*/
+	 * change detection -> retain the output data, replace the input data 
+	 * including the application of the invert mask. */
 
-	dev_data->last_data = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset)
-		^ (dev_data->invert_mask & ~dev_data->pin_dir);
+	dev_data->last_data &= dev_data->pin_dir;
+	dev_data->last_data |= sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset) 
+		^ dev_data->invert_mask;
 
 	/* If an initial value was specified for the pin, adjust the data register
 	 * accordingly and store the initial value locally. */
@@ -163,9 +191,9 @@ static int gpio_xlnx_axi_pin_config (
 	if ((flags & GPIO_OUTPUT) 
 		&& (flags & (GPIO_OUTPUT_INIT_LOW | GPIO_OUTPUT_INIT_HIGH))) {
 
-		if (flags & GPIO_OUTPUT_INIT_LOW) {
+		if (flags & GPIO_OUTPUT_INIT_HIGH) {
 			dev_data->last_data |= BIT(pin);
-		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
+		} else if (flags & GPIO_OUTPUT_INIT_LOW) {
 			dev_data->last_data &= ~BIT(pin);
 		}
 
@@ -183,12 +211,14 @@ static int gpio_xlnx_axi_port_get_raw (
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
-	reg_val  = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset);
-	reg_val ^= dev_data->invert_mask;
-	reg_val &= ~dev_data->pin_dir;
+	/* Read the entire data word. Pins configured as output are
+	 * RAZ. Apply the invert mask to the read data. */
 
-	/* Store the data just read as reference for future pin level
-	 * change detection. */
+	reg_val = sys_read32(dev_conf->base_addr + dev_conf->data_reg_offset)
+		^ dev_data->invert_mask;
+
+	/* Store the register contents just read as reference for pin level
+	 * change detection -> retain the output data, replace the input data. */
 
 	dev_data->last_data &= dev_data->pin_dir;
 	dev_data->last_data |= reg_val;
@@ -207,13 +237,22 @@ static int gpio_xlnx_axi_port_set_masked_raw (
 	u32_t							reg_val   = 0;
 	u32_t							reg_msk   = 0;
 
-	reg_val = (u32_t)value;
-	reg_msk = (u32_t)mask;
+	/* Write the entire data word with an additional mask
+	 * provided by the caller. Although writing to pins 
+	 * configured as input has no effect, mask out any bits
+	 * that belong to pins configured as input. Apply the 
+	 * invert mask to the data to be written. Apply the mask
+	 * provided by the caller afterwards. */
+
+	reg_val = (u32_t)value & dev_data->pin_dir;
+	reg_msk = (u32_t)mask  & dev_data->pin_dir;
 
     reg_val ^= dev_data->invert_mask;
-	reg_val &= dev_data->pin_dir;
-	reg_msk &= dev_data->pin_dir;
 	reg_val &= reg_msk;
+
+	/* Store the register contents about to be written as 
+	 * reference for pin level change detection -> retain the 
+	 * input data, replace the output data. */
 
 	dev_data->last_data &= ~dev_data->pin_dir;
 	dev_data->last_data |= reg_val;
@@ -230,10 +269,21 @@ static int gpio_xlnx_axi_port_set_bits_raw (
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
-	reg_val  = (u32_t)pins;
-    reg_val ^= dev_data->invert_mask;
-	reg_val &= dev_data->pin_dir;
+	/* Set individual output pins based on the bitmask
+	 * provided by the caller, then write the entire data 
+	 * word. Although writing to pins configured as input 
+	 * has no effect, mask out any bits that belong to pins
+	 * configured as input. Apply the invert mask to the 
+	 * data to be written. */
 
+	reg_val  = (u32_t)pins & dev_data->pin_dir;
+    reg_val ^= dev_data->invert_mask;
+
+	/* Store the register contents about to be written as 
+	 * reference for pin level change detection -> retain the 
+	 * input data, replace the output data. */
+
+	dev_data->last_data &= ~dev_data->pin_dir;
 	dev_data->last_data |= reg_val;
 
 	sys_write32(dev_data->last_data, dev_conf->base_addr + dev_conf->data_reg_offset);
@@ -248,11 +298,21 @@ static int gpio_xlnx_axi_port_clear_bits_raw (
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
-	reg_val  = (u32_t)pins;
-	reg_val &= dev_data->pin_dir;
-    reg_val ^= (dev_data->invert_mask & dev_data->pin_dir);
+	/* Clear individual output pins based on the bitmask
+	 * provided by the caller, then write the entire data 
+	 * word. Although writing to pins configured as input 
+	 * has no effect, mask out any bits that belong to pins
+	 * configured as input. Apply the invert mask to the 
+	 * data to be written. */
+
+	reg_val  = (u32_t)pins & dev_data->pin_dir;
+    reg_val ^= dev_data->invert_mask;
 	reg_val  = ~reg_val;
-	reg_val |= ~(dev_data->pin_dir);
+
+	/* Store the register contents about to be written as 
+	 * reference for pin level change detection -> apply
+	 * the calculated bitmask masking out the output pins
+	 * specified by the caller. */
 
 	dev_data->last_data &= reg_val;
 
@@ -268,9 +328,20 @@ static int gpio_xlnx_axi_port_toggle_bits (
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
-	reg_val  = (u32_t)pins;
+	/* Toggle individual output pins based on the bitmask
+	 * provided by the caller, then write the entire data 
+	 * word. Although writing to pins configured as input 
+	 * has no effect, mask out any bits that belong to pins
+	 * configured as input. Apply the invert mask to the 
+	 * data to be written. */
+
+	reg_val  = (u32_t)pins & dev_data->pin_dir;
 	reg_val ^= dev_data->invert_mask;
-	reg_val &= dev_data->pin_dir;
+
+	/* Store the register contents about to be written as 
+	 * reference for pin level change detection -> apply
+	 * the calculated bitmask using XOR in order to toggle
+	 * the pins specified by the caller. */
 
 	dev_data->last_data ^= reg_val;
 
@@ -287,8 +358,6 @@ static int gpio_xlnx_axi_pin_interrupt_configure (
 	struct gpio_xlnx_axi_dev_cfg 	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 
-	/* Precondition checks */
-
 	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
 		/* Pin index exceeds the valid range. */
 		return -EINVAL;
@@ -303,7 +372,7 @@ static int gpio_xlnx_axi_pin_interrupt_configure (
 
 		dev_data->int_mask &= ~BIT(pin);
 
-		if (dev_data->int_mask == 0x00000000) {
+		if (dev_data->int_mask == 0) {
 			dev_data->use_interrupt = 0;
 		}
 
@@ -336,6 +405,7 @@ static int gpio_xlnx_axi_manage_callback (
 	struct gpio_xlnx_axi_dev_data *dev_data = DEV_DATA(dev);
 
 	if (dev_conf->supp_interrupt == 0) {
+		/* Interrupt not supported by the current instance. */
 		return -ENOTSUP;
 	}
 
@@ -348,18 +418,26 @@ static int gpio_xlnx_axi_enable_callback (
 {
 	struct gpio_xlnx_axi_dev_cfg  	*dev_conf = DEV_CFG(dev);
 	struct gpio_xlnx_axi_dev_data 	*dev_data = DEV_DATA(dev);
+	u32_t							ref_mask  = dev_data->callback_mask;
 
 	if (dev_conf->supp_interrupt == 0) {
+		/* Interrupt not supported by the current instance. */
 		return -ENOTSUP;
 	}
 
 	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
+		/* Pin index exceeds the valid range. */
 		return -EINVAL;
 	}
 
 	dev_data->callback_mask |= BIT(pin);
 
-	sys_write32(GPIO_XLNX_AXI_CH1_INT_ENABLE, (dev_conf->base_addr + dev_conf->ip_ier_reg_offset));
+	if (ref_mask == 0) {
+		/* The first callback has been enabled -> set the interrupt enable bit */
+		sys_write32(GPIO_XLNX_AXI_CH1_INT_ENABLE, 
+			(dev_conf->base_addr + dev_conf->ip_ier_reg_offset));
+	}
+
 	return 0;
 }
 
@@ -371,18 +449,22 @@ static int gpio_xlnx_axi_disable_callback (
 	struct gpio_xlnx_axi_dev_data	*dev_data = DEV_DATA(dev);
 
 	if (dev_conf->supp_interrupt == 0) {
+		/* Interrupt not supported by the current instance. */
 		return -ENOTSUP;
 	}
 
 	if (pin >= GPIO_XLNX_AXI_PINS_PER_CHANNEL) {
+		/* Pin index exceeds the valid range. */
 		return -EINVAL;
 	}
 
 	dev_data->callback_mask &= ~BIT(pin);
 
-	if (dev_data->callback_mask == 0x00000000)
+	if (dev_data->callback_mask == 0)
 	{
-		sys_write32(GPIO_XLNX_AXI_CH1_INT_DISABLE, dev_conf->base_addr + dev_conf->ip_ier_reg_offset);
+		/* The last callback has been disabled -> clear the interrupt enable bit */
+		sys_write32(GPIO_XLNX_AXI_CH1_INT_DISABLE, 
+			(dev_conf->base_addr + dev_conf->ip_ier_reg_offset));
 	}
 
 	return 0;
@@ -397,12 +479,18 @@ static u32_t gpio_xlnx_axi_get_pending_int (struct device *dev)
 	if (    dev_conf->supp_interrupt == 0
 		 || dev_data->use_interrupt  == 0)
 	{
+		/* No interrupt specified in device tree for this instance or
+		 * not a single pin managed by this instance is configured as
+		 * an interrupt source -> no pending interrupt. */
+
 		return 0;
 	}
 
 	reg_val = sys_read32(dev_conf->base_addr + dev_conf->ip_isr_reg_offset);
 	return (reg_val & GPIO_XLNX_AXI_CH1_INT_PENDING) ? 1 : 0;
 }
+
+/* GPIO API function pointers for this driver */
 
 static const struct gpio_driver_api gpio_xlnx_axi_driver_api = {
 	.pin_configure           = gpio_xlnx_axi_pin_config,
@@ -417,6 +505,8 @@ static const struct gpio_driver_api gpio_xlnx_axi_driver_api = {
 	.disable_callback        = gpio_xlnx_axi_disable_callback,
 	.get_pending_int         = gpio_xlnx_axi_get_pending_int
 };
+
+/* Per-instance run-time data initialization function */
 
 static int gpio_xlnx_axi_init(struct device *dev) 
 {
@@ -434,6 +524,8 @@ static int gpio_xlnx_axi_init(struct device *dev)
 
 	return 0;
 }
+
+/* Device tree-dependent driver instance declaration */
 
 #ifdef DT_INST_0_XLNX_AXI_GPIO
 
@@ -508,7 +600,7 @@ static void gpio_xlnx_axi_config_interrupt(struct device* dev)
 		irq_enable(DT_INST_0_XLNX_AXI_GPIO_IRQ_0);
 		sys_write32(GPIO_XLNX_AXI_GLOBAL_INT_ENABLE, dev_conf->base_addr + dev_conf->gier_reg_offset);
 	}
-	#endif /* CONFIG_GPIO_XLNX_AXI_CH1 && CONFIG_GPIO_XLNX_AXI_CH1_USE_INTERRUPT */
+	#endif /* DT_INST_0_XLNX_AXI_GPIO && DT_INST_0_XLNX_AXI_GPIO_IRQ_0 */
 
 	#if defined(DT_INST_1_XLNX_AXI_GPIO) && defined(DT_INST_1_XLNX_AXI_GPIO_IRQ_0)
 	if (dev_conf->base_addr == DT_INST_1_XLNX_AXI_GPIO_BASE_ADDRESS) {
@@ -521,5 +613,5 @@ static void gpio_xlnx_axi_config_interrupt(struct device* dev)
 		irq_enable(DT_INST_1_XLNX_AXI_GPIO_IRQ_0);
 		sys_write32(GPIO_XLNX_AXI_GLOBAL_INT_ENABLE, dev_conf->base_addr + dev_conf->gier_reg_offset);
 	}
-	#endif /* CONFIG_GPIO_XLNX_AXI_CH2 && CONFIG_GPIO_XLNX_AXI_CH2_USE_INTERRUPT */
+	#endif /* DT_INST_1_XLNX_AXI_GPIO && DT_INST_1_XLNX_AXI_GPIO_IRQ_0 */
 }
