@@ -250,13 +250,13 @@
 /* Device configuration / run-time data resolver macros */
 
 #define DEV_CFG(dev) \
-	((struct eth_xlnx_GEM_dev_cfg *)(dev)->config->config_info)
+	((struct eth_xlnx_gem_dev_cfg *)(dev)->config->config_info)
 #define DEV_DATA(dev) \
-	((struct eth_xlnx_GEM_dev_data *)(dev)->driver_data)
+	((struct eth_xlnx_gem_dev_data *)(dev)->driver_data)
 
 /* IRQ handler function type */
 
-typedef void (*eth_xlnx_GEM_config_irq_t)(struct device *dev);
+typedef void (*eth_xlnx_gem_config_irq_t)(struct device *dev);
 
 /* Enums for bitfields representing configuration settings */
 

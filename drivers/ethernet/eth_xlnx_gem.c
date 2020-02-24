@@ -787,6 +787,7 @@ static void eth_xlnx_gem_aux_thread (void *p1, void *p2, void *p3)
 				} else {
 					eth_xlnx_gem_stop_device(dev);
 					dev_data->eff_link_speed = eth_xlnx_gem_phy_poll_link_speed(dev);
+					printk("GEM @ 0x%08X: new ELS %u from eth_xlnx_gem_phy_poll_link_speed()\n", dev_conf->base_addr, dev_data->eff_link_speed);
 					eth_xlnx_gem_configure_clocks(dev);
 					net_eth_carrier_on(iface);
 					eth_xlnx_gem_start_device(dev);
@@ -1693,7 +1694,8 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 	u32_t	tmp		= 0;
 
 	if (dev_conf->init_phy == 0 || dev_data->eff_link_speed == LINK_DOWN) {
-
+		printk("eth_xlnx_gem_configure_clocks: static, init_phy %u, ELS %u\n", dev_conf->init_phy, dev_data->eff_link_speed);
+		printk("eth_xlnx_gem_configure_clocks: configuring for MLS %u\n", dev_conf->max_link_speed);
 		/* Run-time data indicates 'link down' or PHY management by this driver
 		 * is disabled -> this indicates the initial device initialization. 
 		 * Once the auxiliary thread has started and has picked up the result of
@@ -1707,6 +1709,7 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 			out = 125000000; /* Target frequency: 125 MHz */
 		}
 	} else if (dev_data->eff_link_speed != LINK_DOWN) {
+		printk("eth_xlnx_gem_configure_clocks: dynamic, ELS %u\n", dev_data->eff_link_speed);
 		if (dev_data->eff_link_speed == LINK_10MBIT) {
 			out = 2500000;   /* Target frequency: 2.5 MHz */
 		} else if (dev_data->eff_link_speed == LINK_100MBIT) {
