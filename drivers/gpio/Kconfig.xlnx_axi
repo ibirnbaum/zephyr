@@ -1,4 +1,5 @@
-# Xilinx AXI GPIO configuration options
+# Xilinx AXI GPIO IP Core driver configuration options
+# Copyright (c) 2020 Immo Birnbaum
 # SPDX-License-Identifier: Apache-2.0
 	
 menuconfig GPIO_XLNX_AXI
@@ -6,8 +7,8 @@ menuconfig GPIO_XLNX_AXI
 	depends on SOC_XILINX_ZYNQ7000
 	select HAS_DTS_GPIO
 	help
-	  Enable the Xilinx AXI GPIO driver. Please note that this
-	  driver only supports the first channel of the AXI GPIO IP
-	  core. The interrupt functionality of this driver is enabled
-	  by specifying an interrupt line in the respective AXI GPIO's
-	  device tree entry.
+	  Enable the Xilinx AXI GPIO IP Core driver. Please note that 
+	  this driver only supports the first channel of the AXI GPIO 
+	  IP core. The optional interrupt functionality of an instance
+	  of this driver is enabled by specifying an interrupt line in 
+	  its respective device tree entry.
