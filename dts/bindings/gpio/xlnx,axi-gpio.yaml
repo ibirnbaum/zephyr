@@ -1,6 +1,9 @@
+#
+# Copyright (c) 2020, Immo Birnbaum
 # SPDX-License-Identifier: Apache-2.0
+#
 
-description: Xilinx AXI GPIO IP core
+description: Xilinx AXI GPIO IP Core driver
 
 compatible: "xlnx,axi-gpio"
 
