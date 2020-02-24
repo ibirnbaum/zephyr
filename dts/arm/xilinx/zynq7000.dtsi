@@ -1,8 +1,7 @@
 /*
  * Copyright (c) 2019 Lexmark International, Inc.
- *
+ * Copyright (c) 2020 Immo Birnbaum
  * SPDX-License-Identifier: Apache-2.0
- *
  */
 
 #include <mem.h>
@@ -35,7 +34,7 @@
         };
 
         eth0: ethernet@e000b000 {
-            compatible = "xlnx,emacps";
+            compatible = "xlnx,gem";
             reg = <0xe000b000 0x1000>;
             status = "okay";
             interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
@@ -46,7 +45,7 @@
         };
 
         eth1: ethernet@e000c000 {
-            compatible = "xlnx,emacps";
+            compatible = "xlnx,gem";
             reg = <0xe000c000 0x1000>;
             status = "okay";
             interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
