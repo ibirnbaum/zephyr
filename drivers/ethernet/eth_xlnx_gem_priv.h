@@ -451,6 +451,7 @@ struct eth_xlnx_gem_dev_data {
 	struct net_if					*iface;
 	u8_t 							mac_addr[6];
 
+	u8_t							enabled;
 	struct k_sem					tx_done_sem;
 
 	struct k_thread					aux_thread_data;

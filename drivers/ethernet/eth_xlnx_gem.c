@@ -362,6 +362,7 @@ static struct eth_xlnx_gem_dev_data eth_xlnx_gem_gem0_dev_data = {
 		CONFIG_ETH_XLNX_GEM_PORT_0_MAC_BYTE_0},
 	#endif
 
+	.enabled            = 0,
 	.aux_thread_prio	= CONFIG_ETH_XLNX_GEM_PORT_0_AUX_THREAD_PRIO,
 	.eff_link_speed		= LINK_DOWN,
 	.phy_addr       	= 0,
@@ -687,6 +688,7 @@ static struct eth_xlnx_gem_dev_data eth_xlnx_gem_gem1_dev_data = {
 		CONFIG_ETH_XLNX_GEM_PORT_1_MAC_BYTE_0},
 	#endif
 
+	.enabled            = 0,
 	.aux_thread_prio	= CONFIG_ETH_XLNX_GEM_PORT_1_AUX_THREAD_PRIO,
 	.eff_link_speed		= LINK_DOWN,
 	.phy_addr       	= 0,
@@ -779,21 +781,41 @@ static void eth_xlnx_gem_aux_thread (void *p1, void *p2, void *p3)
 				link_status = eth_xlnx_gem_phy_poll_link_status(dev);
 
 				if (link_status == 0) {
+					/* Link is down -> disable RX/TX/interrupts, propagate to the Ethernet layer
+					 * that the link has gone down. */
+
 					eth_xlnx_gem_stop_device(dev);
 					net_eth_carrier_off(iface);
 					dev_data->eff_link_speed = LINK_DOWN;
 
-					printk("GEM @ 0x%08X: link down\n", dev_conf->base_addr);
+					printk("GEM @ 0x%08X link down\n", dev_conf->base_addr);
+					LOG_DBG("eth_xlnx_gem_aux_thread: GEM @ 0x%08X link down\n", dev_conf->base_addr);
 				} else {
+
+					/* A link has been detected, which, depending on the driver's configuration,
+					 * might have a different speed than the previous link. Therefore, the clock
+					 * divisors must be adjusted accordingly (requires both div0 and div1 to have
+					 * been set to 0 = auto-detect in the menuconfig interface). Afterwards, reset
+					 * the RX and TX buffer descriptors to their initial states for a clean start
+					 * and then re-enable RX/TX/interrupts after propagating to the Ethernet layer
+					 * that the interface is back up again. */
+
 					eth_xlnx_gem_stop_device(dev);
 					dev_data->eff_link_speed = eth_xlnx_gem_phy_poll_link_speed(dev);
-					printk("GEM @ 0x%08X: new ELS %u from eth_xlnx_gem_phy_poll_link_speed()\n", dev_conf->base_addr, dev_data->eff_link_speed);
 					eth_xlnx_gem_configure_clocks(dev);
+					eth_xlnx_gem_configure_buffers(dev);
 					net_eth_carrier_on(iface);
 					eth_xlnx_gem_start_device(dev);
 
 					printk(
-						"GEM @ 0x%08X: link up, speed %s\n",
+						"GEM @ 0x%08X link up, %s\n",
+						dev_conf->base_addr,
+						(dev_data->eff_link_speed == LINK_1GBIT)   ? "1 GBit/s"   :
+						(dev_data->eff_link_speed == LINK_100MBIT) ? "100 MBit/s" :
+						(dev_data->eff_link_speed == LINK_10MBIT)  ? "10 MBit/s"  :
+						"undefined / link down");
+					LOG_DBG(
+						"eth_xlnx_gem_aux_thread: GEM @ 0x%08X link up, %s\n",
 						dev_conf->base_addr,
 						(dev_data->eff_link_speed == LINK_1GBIT)   ? "1 GBit/s"   :
 						(dev_data->eff_link_speed == LINK_100MBIT) ? "100 MBit/s" :
@@ -1023,7 +1045,7 @@ static void eth_xlnx_gem_iface_init (struct net_if *iface)
 {
 	struct device 					*dev      = net_if_get_device(iface);
 	struct eth_xlnx_gem_dev_cfg 	*dev_conf = DEV_CFG(dev);
-	struct eth_xlnx_gem_dev_data *dev_data = DEV_DATA(dev);
+	struct eth_xlnx_gem_dev_data	*dev_data = DEV_DATA(dev);
 
 	/* Set the initial contents of the current instance's run-time data */
 
@@ -1049,16 +1071,9 @@ static void eth_xlnx_gem_iface_init (struct net_if *iface)
 
 	k_sem_init(&dev_data->tx_done_sem, 0, 1);
 
-	/* Initialize data in the RX/TX BD ring values which have not yet been initialized */
+	/* Initialize semaphores in the RX/TX BD ring values which have not yet been initialized */
 
-	dev_data->rxbd_ring.next_to_process = 0;
-	dev_data->rxbd_ring.next_to_use     = 0;
-	dev_data->rxbd_ring.free_bds        = dev_conf->rxbd_count;
 	k_sem_init(&dev_data->rxbd_ring.ring_sem, 1, 1);
-
-	dev_data->txbd_ring.next_to_process = 0;
-	dev_data->txbd_ring.next_to_use     = 0;
-	dev_data->txbd_ring.free_bds        = dev_conf->txbd_count;
 	k_sem_init(&dev_data->txbd_ring.ring_sem, 1, 1);
 
 	/* Initialize the mailbox for the auxiliary thread */
@@ -1157,7 +1172,7 @@ static void eth_xlnx_gem_isr (void *arg)
 	u32_t							reg_val_isr       = 0;
 	u8_t							aux_thread_notify = 0x00;
 
-    /* Read & clear interrupt status register */
+    /* Read the interrupt status register */
     	
 	reg_val_isr = sys_read32(dev_conf->base_addr + ETH_XLNX_GEM_ISR_OFFSET);
 
@@ -1194,6 +1209,7 @@ static void eth_xlnx_gem_isr (void *arg)
 static int eth_xlnx_gem_start_device (struct device *dev) 
 {
 	struct eth_xlnx_gem_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct eth_xlnx_gem_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
 
 	/* TODO: start may not be performed if link is down? -> compare to other drivers */
@@ -1201,6 +1217,12 @@ static int eth_xlnx_gem_start_device (struct device *dev)
 	/* Disable all the MAC interrupts */
 
 	sys_write32(ETH_XLNX_GEM_IXR_ALL_MASK, dev_conf->base_addr + ETH_XLNX_GEM_IDR_OFFSET);
+	sys_write32(ETH_XLNX_GEM_IXR_ALL_MASK, dev_conf->base_addr + ETH_XLNX_GEM_ISR_OFFSET);
+
+	/* Clear RX & TX status registers */
+
+	sys_write32(0xFFFFFFFF, dev_conf->base_addr + ETH_XLNX_GEM_TXSR_OFFSET);
+	sys_write32(0xFFFFFFFF, dev_conf->base_addr + ETH_XLNX_GEM_RXSR_OFFSET);
 
 	/* RX and TX enable */
 
@@ -1208,17 +1230,23 @@ static int eth_xlnx_gem_start_device (struct device *dev)
 	reg_val |= (ETH_XLNX_GEM_NWCTRL_RXEN_BIT | ETH_XLNX_GEM_NWCTRL_TXEN_BIT);
 	sys_write32(reg_val, dev_conf->base_addr + ETH_XLNX_GEM_NWCTRL_OFFSET);
 
+	dev_data->enabled = 1;
+
 	/* Enable all the MAC interrupts */
 
 	sys_write32(ETH_XLNX_GEM_IXR_ALL_MASK, dev_conf->base_addr + ETH_XLNX_GEM_IER_OFFSET);
 
+	LOG_DBG("eth_xlnx_gem_start_device: GEM @ 0x%08X started\n", dev_conf->base_addr);
 	return 0;
 }
 
 static int eth_xlnx_gem_stop_device (struct device *dev)
 {
 	struct eth_xlnx_gem_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct eth_xlnx_gem_dev_data	*dev_data = DEV_DATA(dev);
 	u32_t							reg_val   = 0;
+
+	dev_data->enabled = 0;
 
 	/* RX and TX disable */
 
@@ -1231,6 +1259,12 @@ static int eth_xlnx_gem_stop_device (struct device *dev)
 	sys_write32(ETH_XLNX_GEM_IXR_ALL_MASK, dev_conf->base_addr + ETH_XLNX_GEM_IDR_OFFSET);
 	sys_write32(ETH_XLNX_GEM_IXR_ALL_MASK, dev_conf->base_addr + ETH_XLNX_GEM_ISR_OFFSET);
 
+	/* Clear RX & TX status registers */
+
+	sys_write32(0xFFFFFFFF, dev_conf->base_addr + ETH_XLNX_GEM_TXSR_OFFSET);
+	sys_write32(0xFFFFFFFF, dev_conf->base_addr + ETH_XLNX_GEM_RXSR_OFFSET);
+
+	LOG_DBG("eth_xlnx_gem_stop_device: GEM @ 0x%08X stopped\n", dev_conf->base_addr);
 	return 0;
 }
 
@@ -1257,7 +1291,7 @@ static int eth_xlnx_gem_send (struct device *dev, struct net_pkt *pkt)
 		return -EINVAL;
 	}
 
-	if (dev_data->eff_link_speed == LINK_DOWN)
+	if (dev_data->eff_link_speed == LINK_DOWN || dev_data->enabled == 0)
 	{
 		/* Won't write any packets to the TX buffers if the physical link is down */
 
@@ -1355,7 +1389,11 @@ static int eth_xlnx_gem_send (struct device *dev, struct net_pkt *pkt)
 
 	/* Block until TX has completed */
 
-	k_sem_take(&dev_data->tx_done_sem, K_FOREVER);
+	int rc = k_sem_take(&dev_data->tx_done_sem, K_MSEC(5000));
+	if (rc < 0) {
+		LOG_DBG("eth_xlnx_gem_send: TX confirmation timed out\n");
+		return -EIO;
+	}
 
 	return 0;
 }
@@ -1428,7 +1466,7 @@ static void eth_xlnx_gem_amba_clk_enable (struct device *dev)
 
 static void eth_xlnx_gem_reset_hw (struct device *dev)
 {
-	struct eth_xlnx_gem_dev_cfg 	*dev_conf = DEV_CFG(dev);
+	struct eth_xlnx_gem_dev_cfg *dev_conf = DEV_CFG(dev);
 
 	/* Controller reset sequence as described in the Zynq-7000 TRM, chapter 16.3.1. */
 
@@ -1453,7 +1491,7 @@ static void eth_xlnx_gem_reset_hw (struct device *dev)
 static void eth_xlnx_gem_set_initial_nwcfg (struct device *dev)
 {
 	struct eth_xlnx_gem_dev_cfg 	*dev_conf	= DEV_CFG(dev);
-	struct eth_xlnx_gem_dev_data *dev_data	= DEV_DATA(dev);
+	struct eth_xlnx_gem_dev_data 	*dev_data	= DEV_DATA(dev);
 	enum eth_xlnx_mdc_clock_divisor	mdc_divisor	= MDC_DIVISOR_224;
 	u32_t							cpu_1x_clk	= 0;
 	u32_t							reg_val		= 0;
@@ -1676,6 +1714,17 @@ static void eth_xlnx_gem_set_mac_address (struct device *dev)
 
 	sys_write32(regval_bot, dev_conf->base_addr + ETH_XLNX_GEM_LADDR1L_OFFSET);
 	sys_write32(regval_top, dev_conf->base_addr + ETH_XLNX_GEM_LADDR1H_OFFSET);
+
+	LOG_DBG(
+		"eth_xlnx_gem_set_mac_address: GEM @ 0x%08X MAC set to %02X:%02X:%02X:%02X:%02X:%02X\n", 
+		dev_conf->base_addr,
+		dev_data->mac_addr[5],
+		dev_data->mac_addr[4],
+		dev_data->mac_addr[3],
+		dev_data->mac_addr[2],
+		dev_data->mac_addr[1],
+		dev_data->mac_addr[0]);
+
 }
 
 static void eth_xlnx_gem_configure_clocks (struct device *dev)
@@ -1694,12 +1743,11 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 	u32_t	tmp		= 0;
 
 	if (dev_conf->init_phy == 0 || dev_data->eff_link_speed == LINK_DOWN) {
-		printk("eth_xlnx_gem_configure_clocks: static, init_phy %u, ELS %u\n", dev_conf->init_phy, dev_data->eff_link_speed);
-		printk("eth_xlnx_gem_configure_clocks: configuring for MLS %u\n", dev_conf->max_link_speed);
 		/* Run-time data indicates 'link down' or PHY management by this driver
 		 * is disabled -> this indicates the initial device initialization. 
 		 * Once the auxiliary thread has started and has picked up the result of
-		 * the auto-negotiation, this statement will evaluate to false. */
+		 * the auto-negotiation (if enabled), this statement will evaluate to 
+		 * false. */
 
 		if (dev_conf->max_link_speed == LINK_10MBIT) {
 			out = 2500000;   /* Target frequency: 2.5 MHz */
@@ -1709,7 +1757,9 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 			out = 125000000; /* Target frequency: 125 MHz */
 		}
 	} else if (dev_data->eff_link_speed != LINK_DOWN) {
-		printk("eth_xlnx_gem_configure_clocks: dynamic, ELS %u\n", dev_data->eff_link_speed);
+		/* Use the effective link speed instead of the maximum/nominal link speed
+		 * for clock configuration. */
+
 		if (dev_data->eff_link_speed == LINK_10MBIT) {
 			out = 2500000;   /* Target frequency: 2.5 MHz */
 		} else if (dev_data->eff_link_speed == LINK_100MBIT) {
@@ -1736,18 +1786,30 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 				break;
 			}
 		}
+	} else {
+		LOG_DBG(
+			"eth_xlnx_gem_configure_clocks: WARNING: clock divisors div0/div1 have non-zero values "
+			"defined in the system configuration (%u/%u), expect only the nominal link speed to work!\n",
+			div0, div1);
 	}
-
+	
 	sys_write32(ETH_XLNX_SLCR_UNLOCK_CONSTANT, ETH_XLNX_SLCR_UNLOCK_REGISTER); /* SLCR unlock */
 
 	/* Write the respective GEM's (R)CLK configuration registers in the SLCR.
 	 * In both cases, bit [0] is the clock enable bit. */
 
-	reg_val = (
-			(((u32_t)dev_conf->gem_clk_source & ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_MASK)
-			<< ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_SHIFT)
-			| ETH_XLNX_SLCR_RCLK_ENABLE_BIT);
+	/* RCLK register */
+
+	reg_val  = sys_read32(dev_conf->slcr_rclk_register_addr);
+    reg_val &= ~(ETH_XLNX_SLCR_RCLK_ENABLE_BIT | (ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_MASK << ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_SHIFT));
 	sys_write32(reg_val, dev_conf->slcr_rclk_register_addr);
+
+	reg_val |= (
+			((u32_t)dev_conf->gem_clk_source & ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_MASK)
+			<< ETH_XLNX_SLCR_RCLK_CTRL_REGISTER_SRC_SHIFT);
+	sys_write32(reg_val, dev_conf->slcr_rclk_register_addr);
+
+	/* CLK register */
 
 	reg_val = (
 		    ((div1 & ETH_XLNX_SLRC_CLK_CTR_REGISTER_DIV_MASK)
@@ -1755,16 +1817,32 @@ static void eth_xlnx_gem_configure_clocks (struct device *dev)
 			| ((div0 & ETH_XLNX_SLRC_CLK_CTR_REGISTER_DIV_MASK)
 			<< ETH_XLNX_SLRC_CLK_CTR_REGISTER_DIV0_SHIFT)
 			| (((u32_t)dev_conf->reference_pll & ETH_XLNX_SLRC_CLK_CTR_REGISTER_REF_PLL_MASK)
-			<< ETH_XLNX_SLRC_CLK_CTR_REGISTER_REF_PLL_SHIFT)
-			| ETH_XLNX_SLCR_CLK_ENABLE_BIT);
+			<< ETH_XLNX_SLRC_CLK_CTR_REGISTER_REF_PLL_SHIFT));
+	sys_write32(reg_val, dev_conf->slcr_clk_register_addr);
+
+	/* Set the clock enable bits */
+	
+	reg_val  = sys_read32(dev_conf->slcr_rclk_register_addr);
+	reg_val |= ETH_XLNX_SLCR_RCLK_ENABLE_BIT;
+	sys_write32(reg_val, dev_conf->slcr_rclk_register_addr);
+
+	reg_val  = sys_read32(dev_conf->slcr_clk_register_addr);
+	reg_val |= ETH_XLNX_SLCR_CLK_ENABLE_BIT;
 	sys_write32(reg_val, dev_conf->slcr_clk_register_addr);
 
 	sys_write32(ETH_XLNX_SLCR_LOCK_CONSTANT, ETH_XLNX_SLCR_LOCK_REGISTER); /* SLCR lock */
+
+	LOG_DBG(
+		"eth_xlnx_gem_configure_clocks: clock divisors div0/div1 set to: %u/%u for target frequency %u Hz\n",
+		div0, div1, out);
 }
 
 static void eth_xlnx_gem_init_phy (struct device *dev)
 {
-	struct eth_xlnx_gem_dev_data *dev_data = DEV_DATA(dev);
+	struct eth_xlnx_gem_dev_cfg		*dev_conf = DEV_CFG(dev);
+	struct eth_xlnx_gem_dev_data	*dev_data = DEV_DATA(dev);
+
+	LOG_DBG("eth_xlnx_gem_init_phy: GEM @ 0x%08X initializing PHY\n", dev_conf->base_addr);
 
 	eth_xlnx_gem_phy_detect(dev);
 		
@@ -1773,6 +1851,11 @@ static void eth_xlnx_gem_init_phy (struct device *dev)
 		eth_xlnx_gem_phy_reset(dev);
 		eth_xlnx_gem_phy_configure(dev);
 	}
+
+	LOG_DBG(
+		"eth_xlnx_gem_init_phy: GEM @ 0x%08X PHY ID 0x%08X\n", 
+		dev_conf->base_addr,
+		dev_data->phy_id);
 }
 
 static void eth_xlnx_gem_configure_buffers (struct device *dev)
@@ -1870,6 +1953,18 @@ static void eth_xlnx_gem_configure_buffers (struct device *dev)
 	bdptr->ctrl = (ETH_XLNX_GEM_TXBD_USED_BIT | ETH_XLNX_GEM_TXBD_WRAP_BIT);
 	bdptr->addr = (u32_t)((u32_t)dev_data->first_tx_buffer 
 		+ (i * (u32_t)dev_conf->tx_buffer_size));
+
+	/* Set free count/current index in the RX/TX BD ring data */
+	
+	dev_data->rxbd_ring.next_to_process = 0;
+	dev_data->rxbd_ring.next_to_use     = 0;
+	dev_data->rxbd_ring.free_bds        = dev_conf->rxbd_count;
+
+	dev_data->txbd_ring.next_to_process = 0;
+	dev_data->txbd_ring.next_to_use     = 0;
+	dev_data->txbd_ring.free_bds        = dev_conf->txbd_count;
+
+	/* Write pointers to the first RX/TX BD to the controller */
 
 	sys_write32((u32_t)dev_data->rxbd_ring.first_bd, dev_conf->base_addr + ETH_XLNX_GEM_RXQBASE_OFFSET);
 	sys_write32((u32_t)dev_data->txbd_ring.first_bd, dev_conf->base_addr + ETH_XLNX_GEM_TXQBASE_OFFSET);
