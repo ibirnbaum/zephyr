@@ -1,4 +1,9 @@
+#
+# Kconfig - Cortex-A9 QEMU Emulation
+#
+# Copyright (c) 2020, Immo Birnbaum
 # SPDX-License-Identifier: Apache-2.0
+#
 
 if BOARD_QEMU_CORTEX_A9
 

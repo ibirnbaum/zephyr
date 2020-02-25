@@ -1,3 +1,10 @@
+#
+# Copyright (c) 2018, Diego Sueiro
+# Copyright (c) 2020, Immo Birnbaum
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
 identifier: qemu_cortex_a9
 name: QEMU Emulation for Cortex-A9
 type: qemu
