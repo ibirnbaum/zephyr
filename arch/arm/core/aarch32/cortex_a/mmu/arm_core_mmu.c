@@ -50,6 +50,9 @@ static int arm_mmu_init(struct device *arg) {
 	u32_t reg_val			= 0;
 	u32_t iter				= 0;
 
+	u32_t ram_base			= DT_INST_0_MMIO_SRAM_BASE_ADDRESS;
+	u32_t ram_top			= ram_base + DT_INST_0_MMIO_SRAM_SIZE;
+
     /* TTB Registers */
 
     __asm__ __volatile__ ("mcr p15,0,%0,c2,c0,0" : : "r"(pagetable_base));
@@ -65,7 +68,7 @@ static int arm_mmu_init(struct device *arg) {
 
     for (iter = 0; iter < 4096; iter++)
     {
-    	if (((iter * 0x00100000) >= 0x00100000) && ((iter * 0x00100000) < 0x20000000)) {
+    	if (((iter * 0x00100000) >= ram_base) && ((iter * 0x00100000) < ram_top)) {
         	simple_pagetable[iter] = arm_mmu_gen_page_entry(
         		(iter * 0x00100000),
     			(ARM_MMU_PAGE_PERM_READ | ARM_MMU_PAGE_PERM_WRITE | ARM_MMU_PAGE_CACHEABLE | ARM_MMU_PAGE_BUFFERABLE)); /* Regular memory */
