@@ -30,13 +30,13 @@ if NETWORKING
 	config NET_L2_ETHERNET
 	default y
 
-	config ETH_XLNX_EMACPS
+	config ETH_XLNX_GEM
 	default y
 
-	config ETH_XLNX_EMACPS_PORT_0
+	config ETH_XLNX_GEM_PORT_0
 	default y
 
-	config ETH_XLNX_EMACPS_PORT_1
+	config ETH_XLNX_GEM_PORT_1
 	default n
 
 endif # NETWORKING
