@@ -16,9 +16,12 @@ toolchain:
   - xtools
 supported:
   - net
+  - netif:eth
 ram: 512
 flash: 256
 testing:
   default: true
   ignore_tags:
     - bluetooth
+    - interrupt
+    - gpio
