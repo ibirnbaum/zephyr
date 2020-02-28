@@ -1,3 +1,9 @@
+/* 
+ * Simple ARMv7 MMU setup
+ * Copyright (c) 2020, Immo Birnbaum
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <device.h>
 #include <init.h>
 #include <kernel.h>
@@ -68,14 +74,19 @@ static int arm_mmu_init(struct device *arg) {
 
     for (iter = 0; iter < 4096; iter++)
     {
-    	if (((iter * 0x00100000) >= ram_base) && ((iter * 0x00100000) < ram_top)) {
+    	if (    ((iter * 0x00100000) >= ram_base) 
+			 && ((iter * 0x00100000)  < ram_top)) {
         	simple_pagetable[iter] = arm_mmu_gen_page_entry(
         		(iter * 0x00100000),
-    			(ARM_MMU_PAGE_PERM_READ | ARM_MMU_PAGE_PERM_WRITE | ARM_MMU_PAGE_CACHEABLE | ARM_MMU_PAGE_BUFFERABLE)); /* Regular memory */
+    			(   ARM_MMU_PAGE_PERM_READ 
+				  | ARM_MMU_PAGE_PERM_WRITE 
+				  | ARM_MMU_PAGE_CACHEABLE 
+				  | ARM_MMU_PAGE_BUFFERABLE)); /* Regular memory */
     	} else {
         	simple_pagetable[iter] = arm_mmu_gen_page_entry(
         		(iter * 0x00100000),
-    			(ARM_MMU_PAGE_PERM_READ | ARM_MMU_PAGE_PERM_WRITE)); /* Strongly ordered */
+    			(   ARM_MMU_PAGE_PERM_READ 
+				  | ARM_MMU_PAGE_PERM_WRITE)); /* Strongly ordered */
     	}
     }
 
