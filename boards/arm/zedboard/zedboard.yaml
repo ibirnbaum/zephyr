@@ -18,7 +18,9 @@ toolchain:
 testing:
   ignore_tags:
     - bluetooth
+    - interrupt
 supported:
   - gpio
   - net
+  - netif:eth
 
