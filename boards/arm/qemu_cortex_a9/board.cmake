@@ -10,7 +10,7 @@ set(QEMU_FLAGS_${ARCH}
   -cpu ${QEMU_CPU_TYPE_${ARCH}}
   -machine xilinx-zynq-a9
   -m 512M
-  -nographic
+  -display none
   -vga none
   -device loader,addr=0xf8000008,data=0xDF0D,data-len=4
   -device loader,addr=0xf8000140,data=0x00500801,data-len=4
