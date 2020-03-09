@@ -15,8 +15,11 @@ config BOARD
 
 config SYS_CLOCK_HW_CYCLES_PER_SEC
 	int
-	default 111111111
+	default 333333333
 
+config SYS_CLOCK_TICKS_PER_SEC
+	default 1000
+	
 config FLASH_SIZE
 	default $(dt_int_val,DT_FLASH_SIZE)
 

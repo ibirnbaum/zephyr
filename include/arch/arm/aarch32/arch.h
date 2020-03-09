@@ -44,6 +44,8 @@
 #include <arch/arm/aarch32/cortex_a/sys_io.h>
 #endif
 
+#include <arch/arm/aarch32/timer.h> /* requires prior sys_io inclusion */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
