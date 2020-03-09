@@ -48,12 +48,11 @@
         flash0   = &flash0;
         uart0    = &uart0;
         uart1    = &uart1;
-        ttc0     = &ttc0;
-        ttc1     = &ttc1;
         eth0     = &eth0;
         eth1     = &eth1;
         ledgpio  = &gpio0;
         swsgpio  = &gpio1;
+	timer    = &arch_timer;
     };
 
     chosen {
