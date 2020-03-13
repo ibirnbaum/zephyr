@@ -37,8 +37,8 @@
             compatible = "xlnx,gem";
             reg = <0xe000b000 0x1000>;
             status = "okay";
-            interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
-                         <GIC_SPI 23 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+            interrupts = <GIC_SPI 22 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>,
+                         <GIC_SPI 23 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
             interrupt-names = "irq_0", "irq_1";
             label = "eth0";
             local-mac-address = [00 80 41 01 02 03];
@@ -48,8 +48,8 @@
             compatible = "xlnx,gem";
             reg = <0xe000c000 0x1000>;
             status = "okay";
-            interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
-                         <GIC_SPI 46 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+            interrupts = <GIC_SPI 45 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>,
+                         <GIC_SPI 46 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
             interrupt-names = "irq_0", "irq_1";
             label = "eth1";
             local-mac-address = [00 80 41 02 03 04];
@@ -59,7 +59,7 @@
             compatible = "xlnx,xuartps";
             reg = <0xe0000000 0x4c>;
             status = "okay";
-            interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+            interrupts = <GIC_SPI 27 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
             interrupt-names = "irq_0";
             label = "uart0";
             current-speed = <115200>;
@@ -70,7 +70,7 @@
             compatible = "xlnx,xuartps";
             reg = <0xe0001000 0x4c>;
             status = "okay";
-            interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+            interrupts = <GIC_SPI 50 IRQ_DEFAULT_PRIORITY IRQ_TYPE_LEVEL>;
             interrupt-names = "irq_0";
             label = "uart1";
             current-speed = <115200>;
@@ -81,10 +81,10 @@
             compatible = "arm,arm-timer";
 	    status = "okay";
             interrupt-names = "irq_0", "irq_1", "irq_2", "irq_3";
-            interrupts = <GIC_PPI 13 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>,
-                         <GIC_PPI 14 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>,
-                         <GIC_PPI 11 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>,
-                         <GIC_PPI 10 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>;
+            interrupts = <GIC_PPI 13 IRQ_DEFAULT_PRIORITY IRQ_TYPE_EDGE>,
+                         <GIC_PPI 14 IRQ_DEFAULT_PRIORITY IRQ_TYPE_EDGE>,
+                         <GIC_PPI 11 IRQ_DEFAULT_PRIORITY IRQ_TYPE_EDGE>,
+                         <GIC_PPI 10 IRQ_DEFAULT_PRIORITY IRQ_TYPE_EDGE>;
             reg = <0xf8f00200 0x1C>;
             label = "arch_timer";
 	};

@@ -164,24 +164,22 @@ static void gic_isr(void *arg)
 	void (*gic_isr_handle)(void *);
 	int irq, isr_offset;
 
-	irq = sys_read32(GICC_IAR);
-	irq &= 0x3ff;
+	do  {
+		irq = sys_read32(GICC_IAR) & 0x3ff;
 
-	if (irq == GICC_IAR_SPURIOUS) {
-		printk("gic: Invalid interrupt\n");
-		return;
-	}
+		if (irq != GICC_IAR_SPURIOUS) {
+			isr_offset     = cfg->isr_table_offset + irq;
+			gic_isr_handle = _sw_isr_table[isr_offset].isr;
 
-	isr_offset = cfg->isr_table_offset + irq;
+			if (gic_isr_handle) {
+				gic_isr_handle(_sw_isr_table[isr_offset].arg);
+			} else {
+				printk("gic: no handler found for int %d\n", irq);
+			}
+		}
 
-	gic_isr_handle = _sw_isr_table[isr_offset].isr;
-	if (gic_isr_handle)
-		gic_isr_handle(_sw_isr_table[isr_offset].arg);
-	else
-		printk("gic: no handler found for int %d\n", irq);
-
-	/* set to inactive */
-	sys_write32(irq, GICC_EOIR);
+		sys_write32(irq, GICC_EOIR);
+	} while (irq != GICC_IAR_SPURIOUS);
 }
 
 static int gic_init(struct device *unused);

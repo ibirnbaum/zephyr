@@ -14,10 +14,14 @@
 			       / (u64_t)CONFIG_SYS_CLOCK_TICKS_PER_SEC))
 
 #define MAX_TICKS	((0xffffffffu - CYC_PER_TICK) / CYC_PER_TICK)
-#define MIN_DELAY	(1000)
+#define MIN_DELAY	(100000)
 
 static struct k_spinlock lock;
 static volatile u64_t last_cycle;
+
+static u32_t delta_ticks_dbg = 0;
+
+#define AUTORELOAD 1
 
 static void arm_arch_timer_compare_isr(void *arg)
 {
@@ -25,23 +29,37 @@ static void arm_arch_timer_compare_isr(void *arg)
 
 	k_spinlock_key_t key = k_spin_lock(&lock);
 
-	u64_t curr_cycle = arm_arch_timer_count();
-	u32_t delta_ticks = (u32_t)((curr_cycle - last_cycle) / CYC_PER_TICK);
+	if (!arm_arch_timer_get_int_status()) {
+		k_spin_unlock(&lock, key);
+		return;
+	}
 
+	u64_t curr_cycle  = arm_arch_timer_count();
+	u32_t curr_ticks  = (u32_t)(curr_cycle / CYC_PER_TICK);
+	u32_t last_ticks  = (u32_t)(last_cycle / CYC_PER_TICK);
+	u32_t delta_ticks = (curr_ticks - last_ticks);
+	u64_t next_cycle  = 0;
+	
 	last_cycle += delta_ticks * CYC_PER_TICK;
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL) ||
 	     IS_ENABLED(CONFIG_QEMU_TICKLESS_WORKAROUND)) {
-		u64_t next_cycle = last_cycle + CYC_PER_TICK;
+		next_cycle = last_cycle + CYC_PER_TICK;
 
 		if ((s64_t)(next_cycle - curr_cycle) < MIN_DELAY) {
 			next_cycle += CYC_PER_TICK;
 		}
+
+		#ifndef AUTORELOAD
 		arm_arch_timer_set_compare(next_cycle);
+		#endif
 	}
+
+	arm_arch_timer_clear_int_status();
 
 	k_spin_unlock(&lock, key);
 
+	delta_ticks_dbg = delta_ticks;
 	z_clock_announce(IS_ENABLED(CONFIG_TICKLESS_KERNEL) ? delta_ticks : 1);
 }
 
@@ -51,9 +69,22 @@ int z_clock_driver_init(struct device *device)
 
 	IRQ_CONNECT(ARM_ARCH_TIMER_IRQ, 0, arm_arch_timer_compare_isr, 0,
 		    ARM_TIMER_FLAGS);
-	arm_arch_timer_set_compare(arm_arch_timer_count() + CYC_PER_TICK);
+
 	arm_arch_timer_enable(true);
 	irq_enable(ARM_ARCH_TIMER_IRQ);
+
+	#ifdef AUTORELOAD
+	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL) ||
+	     IS_ENABLED(CONFIG_QEMU_TICKLESS_WORKAROUND)) {
+		arm_arch_timer_set_auto_increment(CYC_PER_TICK);
+	}
+	#endif
+
+	u64_t curr_cycle = arm_arch_timer_count();
+	u32_t curr_ticks = (u32_t)(curr_cycle / CYC_PER_TICK);
+	last_cycle       = curr_ticks * CYC_PER_TICK;
+
+	arm_arch_timer_set_compare(curr_cycle + CYC_PER_TICK);
 
 	return 0;
 }
