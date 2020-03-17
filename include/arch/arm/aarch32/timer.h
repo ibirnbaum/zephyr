@@ -44,7 +44,6 @@ static ALWAYS_INLINE void arm_arch_timer_set_compare(u64_t val)
 	 * 3. Write the upper 32-bit Comparator Value Register.
 	 * 4. Set the Comparator Enable bit and the IRQ enable bit. */
 
-	cntv_ctl = sys_read32(DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + INT_STATUS_REG_OFFSET);
 	cntv_ctl = sys_read32(DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + CONTROL_REG_OFFSET);
 	sys_write32((cntv_ctl & ~COMP_CTL_ENABLE), DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + CONTROL_REG_OFFSET);
 
@@ -62,13 +61,6 @@ static ALWAYS_INLINE u8_t arm_arch_timer_get_int_status(void)
 static ALWAYS_INLINE void arm_arch_timer_clear_int_status(void)
 {
 	sys_write32(0x1, DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + INT_STATUS_REG_OFFSET);
-}
-
-static ALWAYS_INLINE u64_t arm_arch_timer_read_comparator(void)
-{
-	u32_t low  = sys_read32(DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + COMPVAL_LOW_REG_OFFSET);
-	u32_t high = sys_read32(DT_ARM_ARM_TIMER_TIMER_BASE_ADDRESS + COMPVAL_HIGH_REG_OFFSET);
-	return (((u64_t)high << 32) | (u64_t)low);
 }
 
 static ALWAYS_INLINE void arm_arch_timer_set_auto_increment(u32_t val)
