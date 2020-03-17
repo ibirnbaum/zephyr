@@ -21,7 +21,7 @@ static volatile u64_t last_cycle;
 
 static u32_t delta_ticks_dbg = 0;
 
-#define AUTORELOAD 1
+//#define AUTORELOAD 1
 
 static void arm_arch_timer_compare_isr(void *arg)
 {
@@ -53,6 +53,8 @@ static void arm_arch_timer_compare_isr(void *arg)
 		#ifndef AUTORELOAD
 		arm_arch_timer_set_compare(next_cycle);
 		#endif
+	} else {
+		arm_arch_timer_set_compare(0xFFFFFFFFFFFFFFFFLLU);
 	}
 
 	arm_arch_timer_clear_int_status();
