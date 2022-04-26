@@ -1,0 +1,21 @@
+#
+# Copyright (c) 2022, Immo Birnbaum
+# SPDX-License-Identifier: Apache-2.0
+#
+
+identifier: zedboard
+name: AVNET/Digilent Zedboard
+type: mcu
+arch: arm
+ram: 524288
+flash: 262144
+toolchain:
+  - zephyr
+supported:
+  - net
+  - netif:eth
+  - gpio
+testing:
+  ignore_tags:
+    - bluetooth
+

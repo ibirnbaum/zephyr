@@ -1,0 +1,95 @@
+/*
+ * Copyright (c) 2022 Immo Birnbaum
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+
+#include <xilinx/zynq7000.dtsi>
+#include <dt-bindings/ethernet/xlnx_gem.h>
+
+/ {
+	model = "AVNET/Digilent Zedboard";
+	compatible = "xlnx,zynq7000";
+	interrupt-parent = <&gic>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0>;
+		};
+	};
+
+	sram0: memory@100000 {
+		compatible = "mmio-sram";
+		reg = <0x00100000 DT_SIZE_M(512)>;
+	};
+
+	flash0: flash@fc000000 {
+		reg = <0xfc000000 DT_SIZE_M(256)>;
+	};
+
+	chosen {
+		zephyr,flash      = &flash0;
+		zephyr,sram       = &sram0;
+		zephyr,console    = &uart1;
+		zephyr,shell-uart = &uart1;
+		zephyr,ocm        = &ocm_low;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		/* LD9: green LED connected to the PS GPIO, MIO[7], bank 0 */
+		ps_led_ld9: led_0 {
+			gpios = <&psgpio_bank0 7 0>;
+			label = "Green LED LD9 (MIO7)";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		/*
+		 * High-active push buttons PB1 (BTN0) and PB2 (BTN1) connected
+		 * to the PS GPIO, MIO[50] and MIO[51] (maps to MIO bank 1 pins
+		 * [18] and [19], as MIO[31 .. 00] are covered by bank 0).
+		 */
+		ps_pb1_btn0: button_0 {
+			gpios = <&psgpio_bank1 18 0>;
+			label = "Pushbutton PB1 (BTN0)";
+		};
+		ps_pb2_btn1: button_1 {
+			gpios = <&psgpio_bank1 19 0>;
+			label = "Pushbutton PB2 (BTN1)";
+		};
+	};
+
+	aliases {
+		led0 = &ps_led_ld9;
+		pb0  = &ps_pb1_btn0;
+		pb1  = &ps_pb2_btn1;
+	};
+};
+
+&uart1 {
+	status = "okay";
+	current-speed = <115200>;
+	clock-frequency = <50000000>;
+};
+
+&gem0 {
+	status = "okay";
+	clock-frequency = <1000000000>;
+	mdc-divider = <XLNX_GEM_MDC_DIVIDER_224>;
+	local-mac-address = [00 00 00 01 02 03];
+	init-mdio-phy;
+};
+
+&psgpio {
+    status = "okay";
+};
