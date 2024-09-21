@@ -1,0 +1,153 @@
+/*
+ * Copyright (c) 2022 Immo Birnbaum
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This overlay adds the two AXI GPIO controller instances which
+ * enable the use of the Zedboard's slider switches SW7 .. SW0
+ * and the LEDs LD7 .. LD0 from within a Zephyr application. The
+ * following configuration of the AXI GPIO controllers is assumed:
+ *
+ * - axigpio0: slider switches @ 0x40000000, 4k range
+ * - axigpio1: LEDs            @ 0x40001000, 4k range
+ * Both controllers operate in single-channel mode.
+ */
+
+/ {
+	soc {
+		axigpio0: gpio@40000000 {
+			compatible = "xlnx,xps-gpio-1.00.a";
+			reg = <0x40000000 0x1000>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			label = "sws_axi_gpio";
+			status = "okay";
+
+			xlnx,is-dual = <0x0>;
+			xlnx,gpio-width = <0x8>;
+			xlnx,all-inputs = <0x1>;
+			xlnx,all-outputs = <0x0>;
+			xlnx,tri-default = <0xFF>;
+		};
+
+		axigpio1: gpio@40001000 {
+			compatible = "xlnx,xps-gpio-1.00.a";
+			reg = <0x40001000 0x1000>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			label = "led_axi_gpio";
+			status = "okay";
+
+			xlnx,is-dual = <0x0>;
+			xlnx,gpio-width = <0x8>;
+			xlnx,all-inputs = <0x0>;
+			xlnx,all-outputs = <0x1>;
+			xlnx,dout-default = <0x0>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		/* LD7 .. LD0: red LEDs above the slider switches connected to
+			the AXI GPIO 1, bits [7 .. 0]. The handle led_0
+			is already assigned to the red LED LD9 connected
+			to the PS GPIO controller -> handles start with
+			led_1. */
+
+		axi_led_ld0: led_1 {
+			gpios = <&axigpio1 0 0>;
+			label = "Red LED LD0 (AXI GPIO 1)";
+		};
+		axi_led_ld1: led_2 {
+			gpios = <&axigpio1 1 0>;
+			label = "Red LED LD1 (AXI GPIO 1)";
+		};
+		axi_led_ld2: led_3 {
+			gpios = <&axigpio1 2 0>;
+			label = "Red LED LD2 (AXI GPIO 1)";
+		};
+		axi_led_ld3: led_4 {
+			gpios = <&axigpio1 3 0>;
+			label = "Red LED LD3 (AXI GPIO 1)";
+		};
+		axi_led_ld4: led_5 {
+			gpios = <&axigpio1 4 0>;
+			label = "Red LED LD4 (AXI GPIO 1)";
+		};
+		axi_led_ld5: led_6 {
+			gpios = <&axigpio1 5 0>;
+			label = "Red LED LD5 (AXI GPIO 1)";
+		};
+		axi_led_ld6: led_7 {
+			gpios = <&axigpio1 6 0>;
+			label = "Red LED LD6 (AXI GPIO 1)";
+		};
+		axi_led_ld7: led_8 {
+			gpios = <&axigpio1 7 0>;
+			label = "Red LED LD7 (AXI GPIO 1)";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		/* SW7 .. SW0: slider switches connected to the AXI GPIO 0, bits
+			[7 .. 0]. The handles button_0 and button_1 are
+			already assigned to the pushbuttons BTN8 and BTN9
+			connected to the PS GPIO controller -> handles start
+			with button_2. */
+
+		axi_slider_sw0: button_2 {
+			gpios = <&axigpio0 0 0>;
+			label = "Slider switch SW0 (AXI GPIO 0)";
+		};
+		axi_slider_sw1: button_3 {
+			gpios = <&axigpio0 1 0>;
+			label = "Slider switch SW1 (AXI GPIO 0)";
+		};
+		axi_slider_sw2: button_4 {
+			gpios = <&axigpio0 2 0>;
+			label = "Slider switch SW2 (AXI GPIO 0)";
+		};
+		axi_slider_sw3: button_5 {
+			gpios = <&axigpio0 3 0>;
+			label = "Slider switch SW3 (AXI GPIO 0)";
+		};
+		axi_slider_sw4: button_6 {
+			gpios = <&axigpio0 4 0>;
+			label = "Slider switch SW4 (AXI GPIO 0)";
+		};
+		axi_slider_sw5: button_7 {
+			gpios = <&axigpio0 5 0>;
+			label = "Slider switch SW5 (AXI GPIO 0)";
+		};
+		axi_slider_sw6: button_8 {
+			gpios = <&axigpio0 6 0>;
+			label = "Slider switch SW6 (AXI GPIO 0)";
+		};
+		axi_slider_sw7: button_9 {
+			gpios = <&axigpio0 7 0>;
+			label = "Slider switch SW7 (AXI GPIO 0)";
+		};
+	};
+
+	aliases {
+		ld0 = &axi_led_ld0;
+		ld1 = &axi_led_ld1;
+		ld2 = &axi_led_ld2;
+		ld3 = &axi_led_ld3;
+		ld4 = &axi_led_ld4;
+		ld5 = &axi_led_ld5;
+		ld6 = &axi_led_ld6;
+		ld7 = &axi_led_ld7;
+		sw0 = &axi_slider_sw0;
+		sw1 = &axi_slider_sw1;
+		sw2 = &axi_slider_sw2;
+		sw3 = &axi_slider_sw3;
+		sw4 = &axi_slider_sw4;
+		sw5 = &axi_slider_sw5;
+		sw6 = &axi_slider_sw6;
+		sw7 = &axi_slider_sw7;
+	};
+};
