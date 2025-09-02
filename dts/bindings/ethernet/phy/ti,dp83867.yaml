@@ -24,6 +24,14 @@ properties:
     description:
       TX internal delay setting for the PHY. Required only if interface type is
       PHY_INTERFACE_MODE_RGMII_ID or PHY_INTERFACE_MODE_RGMII_TXID.
+  ti,dp83867-rxctrl-strap-quirk:
+    type: boolean
+    description:
+      This flag indicates that the RX_DV/RX_CTRL pin is strapped in either
+      mode 1 or 2 in the current target hardware setup. This can cause the
+      PHY to get stuck in internal test mode rather than the regular operation
+      mode unless the control bit for the test mode is cleared explicitly
+      during the initialization of the PHY.
   ti,interface-type:
     type: string
     description: Which type of phy connection the phy is set up for
