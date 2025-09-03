@@ -35,11 +35,18 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL);
 #define PHY_TI_DP83867_RESET_PULSE_WIDTH 1
 #define PHY_TI_DP83867_POR_DELAY         200
 
+#define PHY_TI_DP83867_REGCR                   0x000d
+#define PHY_TI_DP83867_ADDAR                   0x000e
+#define PHY_TI_DP83867_REGCR_FUNC_ADDR         0x0000
+#define PHY_TI_DP83867_REGCR_FUNC_DATA         0x4000
+#define PHY_TI_DP83867_REGCR_DEVAD             0x001f
 #define PHY_TI_DP83867_MICR                    0x0012
 #define PHY_TI_DP83867_ISR                     0x0013
 #define PHY_TI_DP83867_LINK_STATUS_CHNG_INT_EN BIT(10)
 #define PHY_TI_DP83867_CFG3                    0x001e
 #define PHY_TI_DP83867_INT_EN                  BIT(7)
+#define PHY_TI_DP83867_CFG4                    0x0031
+#define PHY_TI_DP83867_INT_TST_MODE_1          BIT(7)
 
 #define DP83867_RGMIICTL1			0x32
 #define DP83867_RGMIIDCTL			0x86
@@ -69,6 +76,7 @@ struct ti_dp83867_config {
 	const struct device *mdio_dev;
 	uint32_t ti_rx_internal_delay;
 	uint32_t ti_tx_internal_delay;
+	bool ti_rxctrl_strap_quirk;
 	enum dp83826_interface phy_iface;
 	enum phy_link_speed default_speeds;
 #if DT_ANY_INST_HAS_PROP_STATUS_OKAY(reset_gpios)
@@ -114,6 +122,69 @@ static int phy_ti_dp83867_write(const struct device *dev, uint16_t reg_addr, uin
 
 	ret = mdio_write(config->mdio_dev, config->addr, reg_addr, (uint16_t)data);
 	if (ret) {
+		return ret;
+	}
+
+	return 0;
+}
+
+static int phy_ti_dp83867_prepare_extended_reg(const struct device *dev, uint16_t ext_reg_addr) {
+	int ret;
+
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_ADDR |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Ext reg access prepare: write to REGCR failed (mode = set address)");
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_ADDAR, ext_reg_addr);
+	if (ret) {
+		LOG_ERR("Ext reg access prepare: write to ADDAR failed (extended register "
+			"addr = 0x%04X)", ext_reg_addr);
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_DATA |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Ext reg access prepare: write to REGCR failed (mode = data access)");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int phy_ti_dp83867_extended_read(const struct device *dev, uint16_t ext_reg_addr,
+					uint32_t *data) {
+	int ret;
+
+	ret = phy_ti_dp83867_prepare_extended_reg(dev, ext_reg_addr);
+	if (ret) {
+		LOG_ERR("Extended read: prepare extended register read failed");
+		return ret;
+	}
+
+	ret = phy_ti_dp83867_read(dev, PHY_TI_DP83867_ADDAR, data);
+	if (ret) {
+		LOG_ERR("Extended read: read extended register data from ADDAR failed");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int phy_ti_dp83867_extended_write(const struct device *dev, uint16_t ext_reg_addr,
+					 uint32_t data) {
+	int ret;
+
+	ret = phy_ti_dp83867_prepare_extended_reg(dev, ext_reg_addr);
+	if (ret) {
+		LOG_ERR("Extended read: prepare extended register write failed");
+		return ret;
+	}
+
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_ADDAR, data);
+	if (ret) {
+		LOG_ERR("Extended read: write extended register data to ADDAR failed");
 		return ret;
 	}
 
@@ -457,6 +528,7 @@ static int phy_ti_dp83867_init(const struct device *dev)
 	struct ti_dp83867_data *data = dev->data;
 	int ret;
 	uint32_t rgmii_ctl_val = 0, rgmii_dctl_val = 0;
+	uint32_t cfg4_val = 0;
 
 	data->dev = dev;
 
@@ -481,6 +553,28 @@ static int phy_ti_dp83867_init(const struct device *dev)
 	if (ret) {
 		LOG_ERR("Failed to reset phy (%d)", config->addr);
 		return ret;
+	}
+
+	if (config->ti_rxctrl_strap_quirk) {
+		/*
+		* Explicitly clear the internal test mode bit in the CFG4 register if the
+		* corresponding flag is set in the device tree
+		*/
+		LOG_DBG("Clearing INT_TST_MODE_1 in CFG4 register");
+
+		ret = phy_ti_dp83867_extended_read(dev, PHY_TI_DP83867_CFG4, &cfg4_val);
+		if (ret) {
+			LOG_ERR("Error reading CFG4");
+			return ret;
+		}
+
+		cfg4_val &= ~PHY_TI_DP83867_INT_TST_MODE_1;
+
+		ret = phy_ti_dp83867_extended_write(dev, PHY_TI_DP83867_CFG4, cfg4_val);
+		if (ret) {
+			LOG_ERR("Error writing CFG4");
+			return ret;
+		}
 	}
 
 	/* Read the RGMIICTL1 register to configure internal delay enable bits*/
@@ -610,6 +704,7 @@ static DEVICE_API(ethphy, ti_dp83867_phy_api) = {
 							 DP83867_RGMII_TX_CLK_DELAY_INV),          \
 		.ti_tx_internal_delay = DT_INST_PROP_OR(n, ti_tx_internal_delay,                   \
 							 DP83867_RGMII_RX_CLK_DELAY_INV),          \
+		.ti_rxctrl_strap_quirk = DT_INST_PROP(n, ti_dp83867_rxctrl_strap_quirk),           \
 		.phy_iface = DT_INST_ENUM_IDX(n, ti_interface_type),                               \
 		.default_speeds = PHY_INST_GENERATE_DEFAULT_SPEEDS(n),				   \
 		RESET_GPIO(n) INTERRUPT_GPIO(n)};                                                  \
