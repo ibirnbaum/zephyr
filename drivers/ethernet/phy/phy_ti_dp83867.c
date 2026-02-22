@@ -35,11 +35,17 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL);
 #define PHY_TI_DP83867_RESET_PULSE_WIDTH 1
 #define PHY_TI_DP83867_POR_DELAY         200
 
-#define PHY_TI_DP83867_MICR                    0x0012
-#define PHY_TI_DP83867_ISR                     0x0013
-#define PHY_TI_DP83867_LINK_STATUS_CHNG_INT_EN BIT(10)
-#define PHY_TI_DP83867_CFG3                    0x001e
-#define PHY_TI_DP83867_INT_EN                  BIT(7)
+#define PHY_TI_DP83867_REGCR                    0x000d
+#define PHY_TI_DP83867_ADDAR                    0x000e
+#define PHY_TI_DP83867_MICR                     0x0012
+#define PHY_TI_DP83867_ISR                      0x0013
+#define PHY_TI_DP83867_LINK_STATUS_CHNG_INT_EN  BIT(10)
+#define PHY_TI_DP83867_CFG3                     0x001e
+#define PHY_TI_DP83867_INT_EN                   BIT(7)
+
+#define PHY_TI_DP83867_REGCR_FUNC_ADDR          0x0000
+#define PHY_TI_DP83867_REGCR_FUNC_DATA          0x4000
+#define PHY_TI_DP83867_REGCR_DEVAD              0x001f
 
 #define DP83867_RGMIICTL1			0x32
 #define DP83867_RGMIIDCTL			0x86
@@ -114,6 +120,70 @@ static int phy_ti_dp83867_write(const struct device *dev, uint16_t reg_addr, uin
 
 	ret = mdio_write(config->mdio_dev, config->addr, reg_addr, (uint16_t)data);
 	if (ret) {
+		return ret;
+	}
+
+	return 0;
+}
+
+static int phy_ti_dp83867_extended_read(const struct device *dev, uint16_t ext_reg_addr,
+					uint32_t *data)
+{
+	int ret;
+
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_ADDR |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Extended read failed: write to REGCR failed (set address)");
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_ADDAR, ext_reg_addr);
+	if (ret) {
+		LOG_ERR("Extended read failed: write to ADDAR failed (extended register "
+			"address = 0x%04X)", ext_reg_addr);
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_DATA |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Extended read failed: write to REGCR failed (set data access)");
+		return ret;
+	}
+	ret = phy_ti_dp83867_read(dev, PHY_TI_DP83867_ADDAR, data);
+	if (ret) {
+		LOG_ERR("Extended read failed: read data from ADDAR failed");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int phy_ti_dp83867_extended_write(const struct device *dev, uint16_t ext_reg_addr,
+					 uint32_t data)
+{
+	int ret;
+
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_ADDR |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Extended write failed: write to REGCR failed (set address)");
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_ADDAR, ext_reg_addr);
+	if (ret) {
+		LOG_ERR("Extended write failed: write to ADDAR failed (extended register "
+			"address = 0x%04X)", ext_reg_addr);
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_REGCR, (PHY_TI_DP83867_REGCR_FUNC_DATA |
+				   PHY_TI_DP83867_REGCR_DEVAD));
+	if (ret) {
+		LOG_ERR("Extended write failed: write to REGCR failed (set data access)");
+		return ret;
+	}
+	ret = phy_ti_dp83867_write(dev, PHY_TI_DP83867_ADDAR, data);
+	if (ret) {
+		LOG_ERR("Extended write: write extended register data to ADDAR failed");
 		return ret;
 	}
 
@@ -484,7 +554,7 @@ static int phy_ti_dp83867_init(const struct device *dev)
 	}
 
 	/* Read the RGMIICTL1 register to configure internal delay enable bits*/
-	ret = phy_ti_dp83867_read(dev, DP83867_RGMIICTL1, &rgmii_ctl_val);
+	ret = phy_ti_dp83867_extended_read(dev, DP83867_RGMIICTL1, &rgmii_ctl_val);
 	if (ret) {
 		LOG_ERR("Error reading DP83867_RGMIICTL1");
 		return ret;
@@ -513,14 +583,14 @@ static int phy_ti_dp83867_init(const struct device *dev)
 	}
 
 	/* write updated delay enable configuration to PHY(DP83867_RGMIICTL1)*/
-	ret = phy_ti_dp83867_write(dev, DP83867_RGMIICTL1, rgmii_ctl_val);
+	ret = phy_ti_dp83867_extended_write(dev, DP83867_RGMIICTL1, rgmii_ctl_val);
 	if (ret) {
 		LOG_ERR("Failed to write DP83867_RGMIICTL1");
 		return ret;
 	}
 
 	/* Read RGMIIDCTL the delay value control register*/
-	ret = phy_ti_dp83867_read(dev, DP83867_RGMIIDCTL, &rgmii_dctl_val);
+	ret = phy_ti_dp83867_extended_read(dev, DP83867_RGMIIDCTL, &rgmii_dctl_val);
 	if (ret) {
 		LOG_ERR("Error reading DP83867_RGMIIDCTL");
 		return ret;
@@ -542,7 +612,7 @@ static int phy_ti_dp83867_init(const struct device *dev)
 	}
 
 	/* Write final delay values to PHY(DP83867_RGMIIDCTL) */
-	ret = phy_ti_dp83867_write(dev, DP83867_RGMIIDCTL, rgmii_dctl_val);
+	ret = phy_ti_dp83867_extended_write(dev, DP83867_RGMIIDCTL, rgmii_dctl_val);
 	if (ret) {
 		LOG_ERR("Error writing DP83867_RGMIIDCTL");
 		return ret;
